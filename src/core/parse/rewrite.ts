@@ -9,7 +9,10 @@ export const ANIMATABLE = new Set([
 // Content here is referenced, not rendered in place. Stamped, never wrapped.
 const NO_WRAP_ANCESTORS = 'defs, symbol, clipPath, mask, pattern, marker';
 const ID_LIST_ATTRS = new Set(['aria-labelledby', 'aria-describedby']);
-const LOCAL_URL = /url\(\s*(['"]?)#(.*?)\1\s*\)/g;
+// Matches up to and including the "#", so the prefix is inserted and nothing is re-tokenised.
+const LOCAL_URL_START = /url\(\s*['"]?#/gi;
+// Ours. Authored copies could spoof keys and wrappers, so they are removed before stamping.
+const RESERVED_ATTRS = ['data-k', 'data-anim', 'data-for'];
 
 export type Warning = 'no-size';
 
@@ -20,7 +23,7 @@ export function rewriteRefs(name: string, value: string, prefix: string): string
   if (ID_LIST_ATTRS.has(name)) {
     return value.split(/\s+/).filter(Boolean).map((id) => prefix + id).join(' ');
   }
-  return value.includes('url(') ? value.replace(LOCAL_URL, `url(#${prefix}$2)`) : value;
+  return value.replace(LOCAL_URL_START, (start) => start + prefix);
 }
 
 function guaranteeViewBox(root: SVGSVGElement, warnings: Warning[]): void {
@@ -111,6 +114,9 @@ export function rewrite(
   const warnings: Warning[] = [];
   const elements = [root, ...Array.from(root.querySelectorAll('*'))];
 
+  for (const element of elements) {
+    for (const name of RESERVED_ATTRS) element.removeAttribute(name);
+  }
   guaranteeViewBox(root, warnings);
   // Keys and labels are read before IDs are namespaced and before wrappers shift the tree.
   const stamped = stampKeys(elements.slice(1), root);

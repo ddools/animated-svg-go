@@ -101,4 +101,31 @@ export const payloads: Record<string, string> = {
   'comment hides markup': svg('<!--><img src=x onerror=alert(1)>--><rect/>'),
   'html tag breaks out of foreign content': svg(`<p ${XHTML}><img src="x" onerror="alert(1)"/></p>`),
   'math namespace confusion': svg('<math xmlns="http://www.w3.org/1998/Math/MathML"><mtext><style><![CDATA[</style><img src=x onerror=alert(1)>]]></style></mtext></math>'),
+
+  // From the M1 security review
+  'quoted url hides a second url': svg('<rect/>', `style='background:url("#a), url(http://evil.test/x")'`),
+  'quoted url hides a second url in mask': svg(`<rect mask='url("#a), url(http://evil.test/m.png")' width='10' height='10'/>`),
+  'quoted url hides a second url in cursor': svg(`<rect cursor='url("#a), url(http://evil.test/c.png"), auto' width='10' height='10'/>`),
+  'unterminated url in style': svg('<rect/>', 'style="background:url(http://evil.test/x"'),
+  'unterminated quoted url in style': svg(`<rect style="mask:url('http://evil.test/m.png" width="10" height="10"/>`),
+  'unterminated url in presentation attribute': svg('<rect fill="url(http://evil.test/x.svg#a" width="10" height="10"/>'),
+  'url with newline and modifier': svg('<rect/>', 'style="background:url(&quot;http://evil.test/x&quot;&#10; crossorigin(anonymous))"'),
+  'css src function': svg('<rect/>', 'style="background:src(&quot;http://evil.test/x&quot;)"'),
+  'css image function': svg('<rect/>', 'style="background:image(&quot;http://evil.test/x.png&quot;)"'),
+  'css custom property carries url': svg('<rect style="--x:url(http://evil.test/x);background:var(--x)" width="10" height="10"/>'),
+  'regex backtracking bomb': svg(`<rect data-x="${'url('.repeat(50_000)}"/>`),
+  'spoofed pipeline attributes': svg('<defs data-anim="" data-for="kdeadbeef" data-k="kdeadbeef"/><rect/>', 'data-k="kroot" data-anim="" data-for="kroot"'),
+  'animateColor and mpath': svg('<rect><animateColor attributeName="fill" values="red;blue" dur="1s"/></rect><path id="p" d="M0 0"/><circle r="1"><animateMotion dur="1s"><mpath href="#p"/></animateMotion></circle>'),
+  'xml:id clobbering': svg('<rect xml:id="cookie"/>'),
+  'html inside desc': svg('<desc><a href="javascript:alert(1)">x</a><image src="http://evil.test/x.png" onerror="alert(1)"/></desc>'),
+  'font tag breakout': svg('<font face="x"><img src="http://evil.test/x.png" onerror="alert(1)"/></font>'),
+  'uppercase xmlns': svg('<g XMLNS="http://www.w3.org/1999/xhtml"><a href="#x">t</a></g>'),
+  'use with rebound xlink prefix': svg('<use xmlns:x="http://www.w3.org/1999/xlink" x:href="http://evil.test/x.svg#a"/>'),
+  'use href with control character': svg('<use href="&#x1;http://evil.test/x.svg#a"/>'),
+  'feImage data svg': svg('<filter id="f"><feImage href="data:image/svg+xml;base64,PHN2Zy8+"/></filter><rect filter="url(#f)" width="10" height="10"/>'),
+  // 30 levels of ten <use> each: about 300 elements, 10^30 rendered shapes.
+  'use expansion bomb': svg(
+    '<g id="a0"><rect width="1" height="1"/></g>' +
+      Array.from({ length: 30 }, (_, n) => `<g id="a${n + 1}">${`<use href="#a${n}"/>`.repeat(10)}</g>`).join(''),
+  ),
 };

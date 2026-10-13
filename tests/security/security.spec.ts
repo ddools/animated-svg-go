@@ -38,7 +38,11 @@ async function detonate(context: BrowserContext, markup: string, sink: Sink) {
     return route.abort();
   });
   await page.goto(SINK);
-  // Fire the events that handler attributes and scriptable links wait for.
+  // Real clicks: only a trusted click follows a javascript: link.
+  for (const link of await page.locator('a').all()) {
+    await link.click({ force: true, timeout: 1000 }).catch(() => {});
+  }
+  // Then the events that handler attributes wait for.
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) {
       for (const type of ['load', 'error', 'focus', 'mouseover', 'click', 'beginEvent']) {
@@ -54,11 +58,20 @@ async function detonate(context: BrowserContext, markup: string, sink: Sink) {
 /** Static checks on the output tree. Runs in the browser so it uses a real XML parser. */
 function inspect(markup: string): string[] {
   const SVG = 'http://www.w3.org/2000/svg';
-  const FORBIDDEN = new Set(['script', 'style', 'foreignobject', 'set', 'animate', 'animatemotion', 'animatetransform', 'discard', 'handler', 'listener']);
+  const FORBIDDEN = new Set(['script', 'style', 'foreignobject', 'set', 'animate', 'animatemotion', 'animatetransform', 'animatecolor', 'mpath', 'discard', 'handler', 'listener']);
   const RASTER = /^data:image\/(png|jpeg|gif|webp);base64,/i;
   const problems: string[] = [];
   const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
   if (doc.querySelector('parsererror')) problems.push('output is not well-formed XML');
+  // The export snippet is pasted into HTML, so the output must also survive an HTML parse intact.
+  const html = new DOMParser().parseFromString(`<!doctype html><body>${markup}</body>`, 'text/html');
+  if (html.head.children.length !== 0 || html.body.children.length !== 1) {
+    problems.push('output does not stay inside one <svg> when parsed as HTML');
+  }
+  for (const element of html.body.querySelectorAll('*')) {
+    if (element.namespaceURI !== SVG) problems.push(`<${element.nodeName}> leaves the SVG namespace when parsed as HTML`);
+  }
+  const keys = new Set(Array.from(doc.querySelectorAll('[data-k]'), (element) => element.getAttribute('data-k')));
   for (const element of doc.querySelectorAll('*')) {
     const tag = element.localName;
     if (element.namespaceURI !== SVG) problems.push(`<${element.nodeName}> is not in the SVG namespace`);
@@ -68,8 +81,11 @@ function inspect(markup: string): string[] {
       if (attr.startsWith('xmlns')) continue;
       if (attr.startsWith('on')) problems.push(`handler ${name} on <${tag}>`);
       if (attr === 'xml:base') problems.push(`xml:base on <${tag}>`);
-      if (attr === 'name') problems.push(`name on <${tag}>`);
-      if (attr === 'id' && !/^a[0-9a-f]{4}-/.test(value)) problems.push(`id="${value}" is not namespaced`);
+      if (attr === 'name' || attr === 'xml:id') problems.push(`${name} on <${tag}>`);
+      if (attr === 'data-k' && !/^k[0-9a-f]{8}$/.test(value)) problems.push(`data-k="${value}" was not made by the pipeline`);
+      if (attr === 'data-for' && !keys.has(value)) problems.push(`data-for="${value}" points at no element`);
+      if (attr === 'data-anim' && (tag !== 'g' || !element.hasAttribute('data-for'))) problems.push(`data-anim on <${tag}>`);
+      if (attr === 'id' && !/^a[0-9a-f]{8}-/.test(value)) problems.push(`id="${value}" is not namespaced`);
       if (attr === 'href' || attr === 'xlink:href') {
         const local = value.startsWith('#') || (tag === 'image' && RASTER.test(value));
         if (!local) problems.push(`${name}="${value.slice(0, 40)}" on <${tag}>`);
@@ -91,6 +107,12 @@ test.describe('the trap works', () => {
     test(`a raw external image makes a request, ${sink}`, async ({ context }) => {
       expect((await detonate(context, payloads['image external'], sink)).requests).toEqual(['http://evil.test/pixel.png']);
     });
+    test(`a raw javascript: link fires a dialog when clicked, ${sink}`, async ({ context }) => {
+      expect((await detonate(context, payloads['a href javascript'], sink)).dialogs).toContain('1');
+    });
+    test(`a raw CSS url() makes a request, ${sink}`, async ({ context }) => {
+      expect((await detonate(context, payloads['unterminated url in style'], sink)).requests).toContain('http://evil.test/x');
+    });
   }
 });
 
@@ -101,7 +123,7 @@ test.describe('hostile files come out inert', () => {
       const out = await normalise(page, raw);
       // Refusing the file outright is a safe outcome.
       if (!out.ok) {
-        expect(out.code).toBe('not-svg');
+        expect(['not-svg', 'too-many-elements']).toContain(out.code);
         return;
       }
       expect(await page.evaluate(inspect, out.svg)).toEqual([]);
@@ -110,6 +132,13 @@ test.describe('hostile files come out inert', () => {
       }
     });
   }
+});
+
+test('a regex backtracking bomb does not stall the main thread', async ({ page }) => {
+  await openPipeline(page);
+  const out = await normalise(page, payloads['regex backtracking bomb']);
+  if (!out.ok) throw new Error(out.message);
+  expect(out.timings.sanitise + out.timings.rewrite).toBeLessThan(2000);
 });
 
 test('layer names are returned as plain strings, never markup', async ({ page }) => {
@@ -131,11 +160,11 @@ test('safe references survive sanitising', async ({ page }) => {
   );
   if (!out.ok) throw new Error(out.message);
   expect(out.svg).toContain(`href="${png}"`);
-  expect(out.svg.match(/<use [^>]*href="#a[0-9a-f]{4}-r"/g)).toHaveLength(2);
-  expect(out.svg).toMatch(/<a [^>]*href="#a[0-9a-f]{4}-r"/);
-  expect(out.svg).toMatch(/fill="url\(#a[0-9a-f]{4}-g\)"/);
-  expect(out.svg).toMatch(/filter="url\(#a[0-9a-f]{4}-f\)"/);
-  expect(out.svg).toMatch(/url\(#a[0-9a-f]{4}-m\)/);
+  expect(out.svg.match(/<use [^>]*href="#a[0-9a-f]{8}-r"/g)).toHaveLength(2);
+  expect(out.svg).toMatch(/<a [^>]*href="#a[0-9a-f]{8}-r"/);
+  expect(out.svg).toMatch(/fill="url\(#a[0-9a-f]{8}-g\)"/);
+  expect(out.svg).toMatch(/filter="url\(#a[0-9a-f]{8}-f\)"/);
+  expect(out.svg).toMatch(/url\(#a[0-9a-f]{8}-m\)/);
   expect(out.svg).toContain('<feGaussianBlur');
 });
 
@@ -149,6 +178,8 @@ test('only the expected payloads are refused outright', async ({ page }) => {
   expect(refused).toEqual([
     'script svg prefix', // root element is not a plain <svg>
     'external entity', // SVGO's parser rejects it
+    'use href with control character', // a control character is not legal XML
+    'use expansion bomb', // over the expanded-shape limit
     'third-party SVG_XSS1.svg', // these three are not well-formed XML
     'third-party SVG_XSS2.svg',
     'third-party SVG_XSS3.svg',

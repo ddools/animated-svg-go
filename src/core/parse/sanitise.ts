@@ -4,15 +4,22 @@ import { PipelineError } from './limits';
 // Security-critical. Changes here need the security-reviewer subagent.
 // See docs/ARCHITECTURE.md section 2.
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
 const LOCAL_REF = /^#/;
 const RASTER_DATA = /^data:image\/(png|jpeg|gif|webp);base64,/i;
-const URL_FN = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
+// The only url() we accept: a same-document reference with nothing odd inside it.
+// No whitespace, brackets, quotes or escapes in the fragment, so it cannot hide a second url().
+const LOCAL_URL_FN = /url\(\s*(['"]?)#[^\s()'"\\]*\1\s*\)/gi;
 // Ways a CSS value can reach the network without a plain url().
-const CSS_LOADERS = /image-set|@import|expression/i;
+const CSS_LOADERS = /image-set|@import|expression|\bsrc\(|\bimage\(/i;
 // Editor attributes that carry a human layer name. Stripped by the sanitiser, so read first.
 const LABEL_ATTRS = new Set(['inkscape:label', 'serif:id', 'sketch:name']);
 
-const FORBID_TAGS = ['foreignObject', 'script', 'style', 'set', 'animate', 'animateMotion', 'animateTransform', 'discard'];
+const FORBID_TAGS = [
+  'foreignObject', 'script', 'style',
+  // All SMIL, including the deprecated and helper elements.
+  'set', 'animate', 'animateMotion', 'animateTransform', 'animateColor', 'mpath', 'discard',
+];
 
 export type Sanitised = {
   root: SVGSVGElement;
@@ -31,7 +38,9 @@ function cssValueIsSafe(value: string): boolean {
   // A backslash before a bracket is a CSS escape trying to spell url( another way.
   if (value.includes('\\') && value.includes('(')) return false;
   if (CSS_LOADERS.test(value)) return false;
-  return [...value.matchAll(URL_FN)].every((match) => LOCAL_REF.test(match[2].trim()));
+  // Remove every well-formed local url(). Any "url(" left over is remote, unterminated or malformed.
+  // Both steps are linear in the length of the value.
+  return !/url\(/i.test(value.replace(LOCAL_URL_FN, ''));
 }
 
 /** Sanitises an SVG string into an inert DOM tree. The tree is never adopted into the app document. */
@@ -44,6 +53,10 @@ export function sanitise(svg: string): Sanitised {
   });
 
   purify.addHook('afterSanitizeAttributes', (node) => {
+    // Under the HTML parser a stray xmlns is a plain attribute. WebKit serialises it as written,
+    // and an XML parser would then move the element and its children into that namespace.
+    const xmlns = node.getAttribute('xmlns');
+    if (xmlns !== null && xmlns !== SVG_NS) node.removeAttribute('xmlns');
     for (const name of ['href', 'xlink:href']) {
       const value = node.getAttribute(name);
       if (value !== null && !hrefIsSafe(node, value)) node.removeAttribute(name);
@@ -63,7 +76,8 @@ export function sanitise(svg: string): Sanitised {
     // DOMPurify drops ids that shadow DOM properties (id="blur", "body", "title"), which breaks
     // real files. The rewrite pass prefixes every id, so no id can collide. `name` has no use in SVG.
     SANITIZE_DOM: false,
-    FORBID_ATTR: ['name'],
+    // xml:id is an id by another name and would escape the prefixing.
+    FORBID_ATTR: ['name', 'xml:id'],
     RETURN_DOM: true,
   });
 
