@@ -16,19 +16,31 @@ Upload -> Sanitise -> Optimise -> Rewrite        (Web Worker)
 
 ## 1. Normalisation pipeline
 
-Two threads. `DOMParser` does not exist in Web Workers and DOMPurify needs a real DOM, so parse, harvest, sanitise and rewrite run on the main thread against an inert `DOMParser` document that is never adopted into the app DOM. The two SVGO passes are string in, string out, so they run in `workers/pipeline.worker.ts`. Main-thread cost on a file at the caps is unmeasured: time it in Chrome and Safari and lower the caps if it janks.
+Two threads. SVGO is string in, string out, so it runs in `workers/pipeline.worker.ts`. DOMPurify needs a real DOM, so sanitise and rewrite run on the main thread, on the inert document DOMPurify returns. That document is never adopted into the app DOM.
 
-1. **Parse.** Main thread. `DOMParser` with `image/svg+xml`. Reject on `<parsererror>`. Hard caps before anything else: raw size (start at 5 MB, checked on the string before parsing), element count (start at 20,000), nesting depth (start at 64). Tune caps on desktop Chrome and Safari.
-2. **Harvest labels.** Main thread. Before sanitising, read human names as plain strings only: `inkscape:label`, Illustrator `data-name`, `id`, child `<title>`, `aria-label`. Store them in a side map keyed by structural position. Never re-insert them as markup.
-3. **Inline styles.** Worker. SVGO `inlineStyles` + `convertStyleToAttrs` on the raw string, so class-based fills survive the sanitiser dropping `<style>`. Warn the user when complex selectors were dropped.
-4. **Sanitise.** Main thread. See section 2.
-5. **Optimise.** Worker. SVGO 4 via `import { optimize } from 'svgo/browser'`. Custom config, not `preset-default`. Keep IDs, groups and `viewBox`. Disable anything that merges paths, collapses groups or minifies IDs (`cleanupIds` minify off, `collapseGroups` off, `mergePaths` off, `convertShapeToPath` off). SVGO v4 already keeps `viewBox` and `<title>` by default.
-6. **Rewrite.** Main thread, on an inert document. The product's core. In order:
-   - Guarantee a `viewBox`. Derive from `width`/`height` if missing. Convert `mm`, `pt`, `in`, `cm` to user units. Remove fixed `width`/`height` on the root.
-   - Namespace every ID with a per-document prefix (`a1b2-`). Rewrite every reference: `url(#…)` in attributes and inline styles, `href`, `xlink:href`, `aria-labelledby`, `aria-describedby`.
-   - Stamp `data-k` on every renderable element. Key = hash(tag + index chain from root) + geometry fingerprint (rounded bbox once known, path command count). Used to rebind animations if the user re-uploads an edited file.
-   - Wrap each animatable element in `<g data-anim data-for="<data-k>">`. Transform and opacity animations target these wrappers. Paint and dash animations target the element (section 3, IR rules).
+Order matters: nothing but our own rewrite touches the markup after it is sanitised. Entry point: `normalise()` in `src/core/parse/index.ts`.
+
+1. **Size cap.** Reject over 5 MB, measured on the string.
+2. **Optimise.** Worker, `core/parse/optimise.ts`. SVGO 4 via `svgo/browser`, custom config, not `preset-default`. It does three jobs:
+   - Rejects malformed XML. There is no separate well-formedness parse.
+   - Enforces the element and depth caps early, off the main thread, so an oversized file is refused before the sanitiser has to walk it.
+   - Removes every element that is not plain SVG (prefixed elements, or a non-SVG `xmlns`). Editor and test-suite metadata embeds XHTML, and under the sanitiser's HTML parser a `<p>` closes the `<svg>` and loses the drawing.
+   - Inlines styles (`inlineStyles` with `onlyMatchedOnce: false`, then `convertStyleToAttrs`), so class-based fills survive the sanitiser dropping `<style>`.
+   Nothing here may merge paths, collapse groups, rename IDs, round numbers or strip editor labels. The worker is terminated after 10 s.
+3. **Sanitise.** Main thread. See section 2. Editor layer names (`inkscape:label`, `serif:id`, `sketch:name`) are read inside a sanitiser hook, as plain strings, just before those attributes are stripped.
+4. **Tree caps.** Element count (20,000) and nesting depth (64) again, on the sanitised tree. Plus an expansion cap: at most 200,000 shapes once every `<use>` is followed, so a few hundred nested `<use>` cannot render billions.
+5. **Rewrite.** Main thread, `core/parse/rewrite.ts`. The product's core. In order:
+   - Remove authored `data-k`, `data-anim` and `data-for`. They are ours, and copies could spoof keys and wrappers.
+   - Guarantee a `viewBox`. Derive from `width`/`height` if missing, converting `mm`, `pt`, `in`, `cm`, `pc` to user units. With no usable size, use `0 0 300 150` (what browsers assume) and warn `no-size`. Remove fixed `width`/`height` on the root.
+   - Stamp `data-k` on every animatable element. Key = hash(tag + index chain from root), salted on collision. M2 adds a geometry fingerprint (rounded bbox, path command count) for rebinding after re-upload.
+   - Read layer names into a `data-k -> name` map. Preference: editor label, `data-name`, child `<title>`, `aria-label`, `id`. They are data, never markup.
+   - Namespace every ID with a prefix derived from a hash of the input (`a` plus 8 hex characters and a hyphen), so output is deterministic. Only the prefix is inserted; values are never re-tokenised. Rewrite every reference: `url(#…)` in attributes and inline styles, `href`, `xlink:href`, `aria-labelledby`, `aria-describedby`.
+   - Wrap each animatable element in `<g data-anim data-for="<data-k>">`. Transform and opacity animations target these wrappers. Paint and dash animations target the element (section 3, IR rules). Direct children of `<switch>` are not wrapped: a wrapper would always pass the conditional test and change which branch renders.
    - Leave `<use>` instances intact. Expand to a real clone (with re-namespaced IDs) only when the user drills into one.
+6. **Serialise** with `XMLSerializer`.
+
+Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s optimise, 1.1 s sanitise, 0.5 s rewrite. WebKit 0.9 s, 0.8 s, 0.4 s. Sanitise and rewrite block the main thread. The caps stay as they are; M2's "loads in under 2 s" target needs this revisited.
+
 7. **Render** into the sandbox iframe (section 2, layer 2).
 8. **Inventory.** After layout, per wrapper: `getBBox()` (includes the child's authored transform, in the wrapper's space), `getTotalLength()` for stroke-capable shapes, type, fill/stroke presence, stroke width, closed path, filter applied, inside clip/mask/pattern/marker, `vector-effect`, node count. Flags: `heavyFilter`, `embeddedRaster`, `textNeedsFont`, `degenerate` (zero-size bbox), `preserveAspectRatioNone`.
 
@@ -38,38 +50,24 @@ Animatable types: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `poly
 
 Three independent layers. One failing must not be enough for an exploit.
 
-### Layer 1: DOMPurify 3.4.x with hooks
+### Layer 1: DOMPurify with hooks
 
-```ts
-import DOMPurify from 'dompurify';
+The code is `src/core/parse/sanitise.ts`. It is the source of truth; this section explains the rules. DOMPurify is pinned to an exact version (3.4.17).
 
-const SAFE_HREF = /^#|^data:image\/(png|jpeg|gif|webp);base64,/i;
-const URL_FN = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
+- **Profile:** `svg` and `svgFilters`, HTML-parser mode, returning DOM.
+- **Forbidden tags:** `foreignObject`, `script`, `style`, and all SMIL (`set`, `animate`, `animateMotion`, `animateTransform`, `animateColor`, `mpath`, `discard`).
+- **`<use>` is allowed.** DOMPurify blocks it by default and real files need it. It is safe only because of the next rule.
+- **`href` and `xlink:href`** must start with `#`. The one exception is a base64 raster `data:` URI (png, jpeg, gif, webp) on `<image>`. No SVG-in-SVG, nothing external, on any element.
+- **Every other attribute** is dropped unless every `url(` in it is a complete, local reference: `url(#fragment)` with no whitespace, brackets, quotes or escapes inside the fragment. Unterminated, remote and oddly quoted forms all fail. It is also dropped if it names another CSS loader (`image-set`, `@import`, `expression`, `src(`, `image(`) or pairs a backslash with a bracket. The checks are linear in the length of the value.
+- **Stray `xmlns`.** A non-SVG `xmlns` on any element is removed. Under the HTML parser it is a plain attribute, but WebKit serialises it as written and an XML parser would then move the subtree into that namespace.
+- **Clobbering guard off, ids prefixed instead.** `SANITIZE_DOM: false`, because the guard deleted legitimate ids such as `blur` and `body`. The rewrite pass prefixes every id, so none can shadow a DOM property. `name` and `xml:id` are forbidden outright.
+- **Uploaded `<style>` is dropped.** SVGO inlines what it can first. Whatever is left (media queries, keyframes, `@font-face`) goes, and the pipeline returns a `style-dropped` warning.
 
-DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  for (const attr of ['href', 'xlink:href']) {
-    const v = node.getAttribute(attr);
-    if (v !== null && !SAFE_HREF.test(v.trim())) node.removeAttribute(attr);
-  }
-  for (const attr of Array.from(node.attributes ?? [])) {
-    if (!/url\(/i.test(attr.value)) continue;
-    const onlyLocal = [...attr.value.matchAll(URL_FN)].every((m) => m[2].trim().startsWith('#'));
-    if (!onlyLocal) node.removeAttribute(attr.name);
-  }
-});
-
-export const sanitise = (svg: string) =>
-  DOMPurify.sanitize(svg, {
-    USE_PROFILES: { svg: true, svgFilters: true },
-    FORBID_TAGS: ['foreignObject', 'script', 'style', 'set', 'animate', 'animateMotion', 'animateTransform', 'discard'],
-    RETURN_TRUSTED_TYPE: false,
-  });
-```
+Tests: `tests/security/`. Each payload is normalised, checked structurally (as XML and again as HTML), then loaded with no sandbox and no CSP, inline in HTML and as a standalone SVG document. Links get a real click. Any dialog or network request fails. Control tests prove the trap fires on raw script, handler, `javascript:` link, image and CSS `url()` payloads.
 
 Notes:
-- Uploaded `<style>` is forbidden in v1. Pipeline step 3 inlines styles on the raw string first, so class-based fills survive.
-- Treat this snippet as a starting point. The security-reviewer subagent must review it in M1 and M7.
-- Pin DOMPurify and watch https://github.com/cure53/DOMPurify/security/advisories (3.4.0 and 3.4.1 shipped security fixes in April 2026).
+- Any change to `sanitise.ts` needs the security-reviewer subagent. It reviews again in M4 (export profile) and M7.
+- Watch https://github.com/cure53/DOMPurify/security/advisories before bumping the pin (3.4.0 and 3.4.1 shipped security fixes in April 2026).
 
 ### Layer 2: inert sandbox
 
@@ -217,7 +215,7 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 | mediabunny | MP4 via WebCodecs | MPL-2.0 |
 | gifenc | GIF encoding | MIT |
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
-| vitest, @playwright/test, pixelmatch, pngjs | Testing | MIT / Apache-2.0 / ISC |
+| vitest, @playwright/test, pixelmatch, pngjs, @types/pngjs, @types/node | Testing | MIT / Apache-2.0 / ISC |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
 | animejs (4.x), v1.1 only | Morph resampling utility | MIT |
 
@@ -236,4 +234,11 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Exports are checked with a separate sanitiser profile that allows our generated `<style>`.
 - 2026-10-13: Reduced-motion handling applies to SVG, CSS and JS exports only.
 - 2026-10-13: Desktop only in v1 (Chrome, Firefox, Safari on Mac). Mobile is not a target. Real-device iPhone gates removed.
+- 2026-10-13: Pipeline order is size cap, SVGO, sanitise, tree caps, rewrite. One SVGO pass before the sanitiser, not two around it, so nothing third-party touches sanitised markup.
+- 2026-10-13: Editor labels are read in a sanitiser hook into a WeakMap, not by a pre-pass keyed on structural position.
+- 2026-10-13: Sanitiser runs in DOMPurify's default HTML-parser mode. SVGO strips non-SVG elements first so embedded XHTML cannot close the `<svg>`.
+- 2026-10-13: `<use>` is allowed (DOMPurify blocks it by default), restricted to same-document `href`.
+- 2026-10-13: DOMPurify's clobbering guard is off (`SANITIZE_DOM: false`) because it removed ids such as `blur`. Every id is prefixed instead, and `name` is forbidden.
+- 2026-10-13: Security review of M1 (Opus subagent). No script execution found. Fixed: two `url()` forms that could reach the network, a quadratic regex on the main thread, no limit on `<use>` expansion, caps enforced only after sanitising, spoofable `data-k`/`data-anim`, leftover SMIL tags, `xml:id`, stray `xmlns`. ID prefix widened from 16 to 32 bits.
+- 2026-10-13: Embedded SVG fonts are dropped. Only WebKit renders them.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

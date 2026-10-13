@@ -45,16 +45,16 @@ A stage is not done until step 6. The tables below list only what is specific to
 | # | Action | Owner | Gate |
 | --- | --- | --- | --- |
 | 1 | Collect 50+ SVGs across the tool mix. Record each licence | Haiku | Der approves the licence list |
-| 2 | Collect public XSS payload sets into `tests/security/` | Opus | |
-| 3 | Parse with caps, label harvest | Opus | |
-| 4 | Worker: SVGO style-inlining pass, then optimise pass | Opus | |
-| 5 | Sanitiser config and hooks | Opus | `security-reviewer` |
-| 6 | Rewrite: viewBox, units, ID namespacing, `data-k`, wrappers | Opus | |
-| 7 | `pnpm corpus` harness: render before and after, pixel-diff, report | Sonnet | Opus reviews |
-| 8 | Run the corpus. Triage every failure by likely cause | `corpus-runner` | |
-| 9 | Fix or explain each failure | Opus | 95%+ identical |
-| 10 | Security suite in all three engines | `security-reviewer` | Must pass before merge |
-| 11 | Time parse and sanitise in Chrome and Safari at the caps. Report the numbers | Der | Opus tunes the caps |
+| 2 | Write XSS payloads by attack class into `tests/security/` | Opus | |
+| 3 | Size cap, SVGO pass and its worker | Opus | |
+| 4 | Sanitiser config, hooks and label harvest | Opus | `security-reviewer` |
+| 5 | Rewrite: viewBox, units, ID namespacing, `data-k`, wrappers | Opus | |
+| 6 | `pnpm corpus` harness: render before and after, pixel-diff, report | Opus | |
+| 7 | Run the corpus. Fix or explain each failure | Opus, `corpus-runner` confirms | 95%+ identical |
+| 8 | Security suite in all three engines | `security-reviewer`, CI for Firefox | Must pass before merge |
+| 9 | Time the pipeline on a file at the caps, Chromium and WebKit | Opus | Numbers in ARCHITECTURE section 1 |
+
+Der's real-Safari timing check moved to Stage 2, when there is a drop zone to use.
 
 ## Stage 2. Sandbox render and inventory (M2)
 
@@ -67,7 +67,7 @@ A stage is not done until step 6. The tables below list only what is specific to
 | 5 | Size and warnings panel | Sonnet | |
 | 6 | UI copy | Haiku | Der reads it |
 | 7 | WebKit e2e run | `webkit-checker` | |
-| 8 | Load a 5 MB file in all three browsers. Check each stays interactive | Der | Sign-off |
+| 8 | Load a 5 MB file in all three browsers. Check each stays interactive. Note how long real Safari takes | Der | Sign-off |
 
 ## Stage 3. Spec, IR and preview (M3, risk 2)
 

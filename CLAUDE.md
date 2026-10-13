@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M0 scaffold built (empty editor page, tooling, CI). No product code yet. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M1 built. The normalisation pipeline (`src/core/parse`), XSS payload suite and corpus harness exist. No editor UI yet. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -27,7 +27,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 ## Invariants (never break these)
 
 1. **Untrusted markup never enters the app DOM.** Uploaded SVG is rendered only inside an `<iframe sandbox="allow-same-origin">` with no `allow-scripts`, plus a deny-all CSP meta. The parent drives it via `contentDocument`.
-2. **Nothing unsanitised is rendered, inserted or rewritten.** Before sanitising, only three things touch the file: the size, element and depth caps, the label harvest (plain strings) and the SVGO style-inlining string pass. DOMPurify with the hooks in `docs/ARCHITECTURE.md`. Uploaded SMIL is stripped.
+2. **Nothing unsanitised is rendered, inserted or rewritten, and nothing but our own rewrite touches the markup after it is sanitised.** Before sanitising, only the size cap and the SVGO string pass (in a worker) touch the file. DOMPurify config and hooks live in `src/core/parse/sanitise.ts`. Uploaded SMIL is stripped. Any change to that file needs the security-reviewer subagent.
 3. **Move the wrapper, paint the element, write to neither's attributes.** The rewrite pass wraps each animatable element in `<g data-anim>`. `transform` and `opacity` target that wrapper. `fill`, `stroke` and dash properties target the element itself through CSS or WAAPI, because its own presentation attributes beat anything inherited from the wrapper. Authored attributes are never written to.
 4. **Bake pivots into keyframes.** Emit `translate(ox,oy) <op> translate(-ox,-oy)` with identical function lists in every keyframe. Do not use `transform-origin` or `transform-box` on SVG.
 5. **The spec is the only state.** The DOM, WAAPI animations and exports are all derived. Undo/redo works on the spec.
@@ -39,24 +39,24 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/editor/App.svelte`, `tests/e2e/`. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/workers/`, and all four `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
   pages/                    Astro pages (landing, editor, about)
   editor/                   Svelte 5 island: App.svelte, panels/, controls/
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
-    parse/                  sanitise.ts, optimise.ts, rewrite.ts, inventory.ts
+    parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts; inventory.ts in M2
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
     ir/                     types.ts, compile.ts, evaluate.ts (sampler maths)
     backends/               waapi.ts, css.ts, snippet.ts, sampler.ts
     export/                 gif.ts, video.ts
-  workers/                  pipeline.worker.ts (SVGO passes only. Parse, sanitise and rewrite need a DOM, so they run on the main thread)
+  workers/                  pipeline.worker.ts (the SVGO pass only. Sanitise and rewrite need a DOM, so they run on the main thread)
 tests/
   unit/                     Vitest
   e2e/                      Playwright: chromium, firefox, webkit projects
-  corpus/                   Real-world SVGs + golden PNGs for pixel diffs
-  security/                 XSS payload fixtures
+  corpus/                   Real-world SVGs, LICENCES.md, known-failures.json, the pixel-diff harness
+  security/                 XSS payloads and the spec that detonates pipeline output unsandboxed
 docs/                       ARCHITECTURE.md, ROADMAP.md, MODELS.md
 .claude/agents/             Project subagents (see docs/MODELS.md)
 ```
@@ -68,7 +68,7 @@ pnpm dev            Astro dev server
 pnpm build          Production build
 pnpm test           Vitest unit tests
 pnpm test:e2e       Playwright, all three engines
-pnpm corpus         (stub until M1) Run the pipeline over tests/corpus and pixel-diff against goldens
+pnpm corpus         Normalise every file in tests/corpus, pixel-diff before against after (Chromium, WebKit)
 pnpm parity         (stub until M4) Compare WAAPI preview, CSS-in-<img> export and sampler frames
 pnpm lint           ESLint + svelte-check + tsc --noEmit
 ```
@@ -95,6 +95,10 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - The root `<svg>` clips overflow. Motion that leaves the viewBox gets cut. Offer viewBox padding, not `overflow: visible`.
 - SVG loaded as an image can't fetch external fonts. Raster export must embed fonts or warn.
 - Shared gradients: editing one element's gradient edits every element using it. Clone on first edit.
+- Code in `core/parse` that touches the DOM can't be unit tested in Vitest (no DOM, on purpose). Test it in the browser through `tests/helpers/pipeline.ts`, which calls the real pipeline via a hook that only exists in `PUBLIC_E2E` builds.
+- The sanitiser parses as HTML. An unknown element inside `<svg>` can close it and drop the drawing. `optimise.ts` removes non-SVG elements first for this reason.
+- DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
+- A `dist/` built by the test suite contains the `window.__asg` test hook. Never deploy a prebuilt `dist/`. Vercel builds its own from source.
 - `pnpm test:e2e` builds the site and serves it on port 4399, so the CSP is live. The dev server does not apply the CSP.
 - Astro 7 puts `astro dev` and `astro preview` in the background when an AI agent runs them. Pass `--ignore-lock` for a foreground server, and stop any server you start.
 - Playwright Firefox can't launch inside the Claude Code command sandbox. Run Chromium and WebKit locally and let CI cover Firefox.
