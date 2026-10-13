@@ -23,9 +23,9 @@ Done when: CI is green on an empty editor page deployed to a Vercel preview.
 
 Lead: Opus 5.5. Haiku 5.5 subagent for corpus collection and triage. Security-reviewer subagent before merge.
 
-- `core/parse/`: parse with caps, label harvest, SVGO style inlining, sanitise, optimise, rewrite (viewBox, units, ID namespacing, `data-k`, wrappers).
+- `core/parse/`: size cap, SVGO pass (style inlining, non-SVG elements removed), sanitise with label harvest, tree caps, rewrite (viewBox, units, ID namespacing, `data-k`, wrappers).
 - `tests/corpus/`: 50+ real files with permissive licences. Mix: Illustrator, Figma, Inkscape, Sketch, icon sets, auto-traced logos, CAD exports, files with `<use>`, gradients, masks, clips, filters, nested `<svg>`, embedded rasters, text.
-- `pnpm corpus`: render original and normalised versions in Chromium and WebKit, pixel-diff with pixelmatch, write a report of failures.
+- `pnpm corpus`: render original and normalised versions in Chromium and WebKit, pixel-diff with pixelmatch, write a report of failures. Failures need an entry in `tests/corpus/known-failures.json`.
 - `tests/security/`: public SVG XSS payload collections. Assert nothing executes, nothing fetches externally.
 
 Done when: 95%+ of the corpus renders identically before and after, every failure is explained, and the security suite passes in all three engines.
