@@ -60,6 +60,10 @@ export function sanitise(svg: string): Sanitised {
     // restricts it to same-document references.
     ADD_TAGS: ['use'],
     FORBID_TAGS,
+    // DOMPurify drops ids that shadow DOM properties (id="blur", "body", "title"), which breaks
+    // real files. The rewrite pass prefixes every id, so no id can collide. `name` has no use in SVG.
+    SANITIZE_DOM: false,
+    FORBID_ATTR: ['name'],
     RETURN_DOM: true,
   });
 

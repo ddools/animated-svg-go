@@ -87,6 +87,9 @@ export const payloads: Record<string, string> = {
   'xml-stylesheet': `<?xml-stylesheet href="http://evil.test/x.css" type="text/css"?>${svg('<rect/>')}`,
   'xsl stylesheet': `<?xml-stylesheet href="http://evil.test/x.xsl" type="text/xsl"?>${svg('<rect/>')}`,
 
+  // DOM clobbering: ids and names that shadow document and form properties
+  'clobbering ids and names': svg('<rect id="cookie" name="cookie"/><g id="body" name="body"/><a id="location" name="location" href="#"><text id="forms">x</text></a><image id="getElementById" name="getElementById"/><filter id="blur"/>'),
+
   // Markup hidden in text, waiting for a different parser
   'cdata breaks out of style': svg('<style><![CDATA[</style><img src="x" onerror="alert(1)">]]></style>'),
   'cdata breaks out of title': svg('<title><![CDATA[</title><script>alert(1)</script>]]></title>'),

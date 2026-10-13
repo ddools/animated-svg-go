@@ -68,6 +68,8 @@ function inspect(markup: string): string[] {
       if (attr.startsWith('xmlns')) continue;
       if (attr.startsWith('on')) problems.push(`handler ${name} on <${tag}>`);
       if (attr === 'xml:base') problems.push(`xml:base on <${tag}>`);
+      if (attr === 'name') problems.push(`name on <${tag}>`);
+      if (attr === 'id' && !/^a[0-9a-f]{4}-/.test(value)) problems.push(`id="${value}" is not namespaced`);
       if (attr === 'href' || attr === 'xlink:href') {
         const local = value.startsWith('#') || (tag === 'image' && RASTER.test(value));
         if (!local) problems.push(`${name}="${value.slice(0, 40)}" on <${tag}>`);
