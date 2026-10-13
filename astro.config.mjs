@@ -6,4 +6,18 @@ export default defineConfig({
   output: 'static',
   integrations: [svelte()],
   vite: { plugins: [tailwindcss()] },
+  security: {
+    // Astro adds script-src and style-src ('self' plus hashes) itself.
+    csp: {
+      directives: [
+        "default-src 'none'",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "connect-src 'self'",
+        "worker-src 'self' blob:",
+        "base-uri 'none'",
+        "form-action 'none'",
+      ],
+    },
+  },
 });
