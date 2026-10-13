@@ -98,6 +98,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - Code in `core/parse` that touches the DOM can't be unit tested in Vitest (no DOM, on purpose). Test it in the browser through `tests/helpers/pipeline.ts`, which calls the real pipeline via a hook that only exists in `PUBLIC_E2E` builds.
 - The sanitiser parses as HTML. An unknown element inside `<svg>` can close it and drop the drawing. `optimise.ts` removes non-SVG elements first for this reason.
 - DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
+- A `dist/` built by the test suite contains the `window.__asg` test hook. Never deploy a prebuilt `dist/`. Vercel builds its own from source.
 - `pnpm test:e2e` builds the site and serves it on port 4399, so the CSP is live. The dev server does not apply the CSP.
 - Astro 7 puts `astro dev` and `astro preview` in the background when an AI agent runs them. Pass `--ignore-lock` for a foreground server, and stop any server you start.
 - Playwright Firefox can't launch inside the Claude Code command sandbox. Run Chromium and WebKit locally and let CI cover Firefox.
