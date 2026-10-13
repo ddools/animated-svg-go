@@ -89,13 +89,15 @@ srcdoc content:
 
 No `allow-scripts`, so nothing inside can run. The parent reaches in through `iframe.contentDocument` to call `element.animate()` and read geometry.
 
+**Open for M2:** an `srcdoc` iframe inherits the parent page's CSP. The editor page's hash-based `style-src` would block the inline `<style>` and `style` attributes inside the sandbox. M2 must decide how the sandbox document gets inline styles (for example a blob URL or a dedicated static page with its own policy) and re-check invariant 1 against the choice.
+
 ### Layer 3: storage and sharing (not v1)
 
 When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve stored SVGs from a separate origin with `Content-Type: image/svg+xml`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, and `Content-Disposition: attachment` for downloads.
 
 ### Always
 
-- The app page itself gets a strict CSP (Astro 6 has built-in CSP support).
+- The app page itself gets a strict CSP (Astro 7 `security.csp`: hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`).
 - Generated exports embed user-derived strings only via `JSON.stringify` or XML escaping. Run every export through the sanitiser as a final check, using an export profile: same hooks, but `style` is not forbidden, because the only `<style>` left is the one `css.ts` generated. The upload profile would strip the keyframes. The security-reviewer subagent must review the export profile in M4.
 
 ## 3. Spec and IR
@@ -205,8 +207,8 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 
 | Package | Purpose | Licence |
 | --- | --- | --- |
-| astro (6.x), @astrojs/svelte, svelte (5.x) | Shell and editor island | MIT |
-| tailwindcss (4.x), daisyui (5.x) | UI | MIT |
+| astro (7.x), @astrojs/svelte (9.x), svelte (5.x) | Shell and editor island | MIT |
+| tailwindcss (4.x), @tailwindcss/vite, daisyui (5.x) | UI | MIT |
 | dompurify (3.4.x) | Sanitiser | MPL-2.0 / Apache-2.0 |
 | svgo (4.x) | Optimiser | MIT |
 | zod | Spec validation | MIT |
@@ -216,6 +218,7 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 | gifenc | GIF encoding | MIT |
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
 | vitest, @playwright/test, pixelmatch, pngjs | Testing | MIT / Apache-2.0 / ISC |
+| typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
 | animejs (4.x), v1.1 only | Morph resampling utility | MIT |
 
 Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
@@ -233,3 +236,4 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Exports are checked with a separate sanitiser profile that allows our generated `<style>`.
 - 2026-10-13: Reduced-motion handling applies to SVG, CSS and JS exports only.
 - 2026-10-13: Desktop only in v1 (Chrome, Firefox, Safari on Mac). Mobile is not a target. Real-device iPhone gates removed.
+- 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

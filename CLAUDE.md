@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: pre-code. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M0 scaffold built (empty editor page, tooling, CI). No product code yet. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -20,7 +20,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 - **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Local-first: every byte stays in the browser in v1. No server storage, no uploads.
 - **v1 exports:** animated SVG with embedded CSS, inline SVG + CSS snippet, JS (WAAPI) snippet, GIF, MP4.
 - **Not in v1:** path morphing (v1.1), Lottie export (deferred, likely never), sharing links (later, via Vercel Blob).
-- **Stack:** Astro 6, one Svelte 5 editor island (`client:only="svelte"`), Tailwind 4, daisyUI 5, Vercel static hosting, GitHub Actions.
+- **Stack:** Astro 7, one Svelte 5 editor island (`client:only="svelte"`), Tailwind 4, daisyUI 5, Vercel static hosting, GitHub Actions.
 - **No GSAP.** Its Standard licence prohibits visual no-code animation builders that compete with Webflow. That is this product. Don't add it, don't copy its plugins, don't suggest it.
 - **No runtime animation library is load-bearing.** Preview uses native WAAPI. Exports are CSS (and SMIL in v1.1). anime.js may be used as a utility later for morph resampling only.
 
@@ -38,6 +38,8 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 10. **Never rely on authored IDs.** Stable keys are `data-k` stamped by the rewrite pass. Authored IDs are namespaced with a per-document prefix.
 
 ## Repository layout (target)
+
+Built so far: `src/pages/`, `src/editor/App.svelte`, `tests/e2e/`. The rest arrives with its first file.
 
 ```
 src/
@@ -59,15 +61,15 @@ docs/                       ARCHITECTURE.md, ROADMAP.md, MODELS.md
 .claude/agents/             Project subagents (see docs/MODELS.md)
 ```
 
-## Commands (create these in milestone M0)
+## Commands
 
 ```
 pnpm dev            Astro dev server
 pnpm build          Production build
 pnpm test           Vitest unit tests
 pnpm test:e2e       Playwright, all three engines
-pnpm corpus         Run the pipeline over tests/corpus and pixel-diff against goldens
-pnpm parity         Compare WAAPI preview, CSS-in-<img> export and sampler frames
+pnpm corpus         (stub until M1) Run the pipeline over tests/corpus and pixel-diff against goldens
+pnpm parity         (stub until M4) Compare WAAPI preview, CSS-in-<img> export and sampler frames
 pnpm lint           ESLint + svelte-check + tsc --noEmit
 ```
 
@@ -93,3 +95,6 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - The root `<svg>` clips overflow. Motion that leaves the viewBox gets cut. Offer viewBox padding, not `overflow: visible`.
 - SVG loaded as an image can't fetch external fonts. Raster export must embed fonts or warn.
 - Shared gradients: editing one element's gradient edits every element using it. Clone on first edit.
+- `pnpm test:e2e` builds the site and serves it on port 4399, so the CSP is live. The dev server does not apply the CSP.
+- Astro 7 puts `astro dev` and `astro preview` in the background when an AI agent runs them. Pass `--ignore-lock` for a foreground server, and stop any server you start.
+- Playwright Firefox can't launch inside the Claude Code command sandbox. Run Chromium and WebKit locally and let CI cover Firefox.

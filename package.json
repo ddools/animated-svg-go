@@ -1,0 +1,35 @@
+{
+  "name": "animated-svg-go",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "corpus": "echo 'pnpm corpus arrives in M1' ",
+    "parity": "echo 'pnpm parity arrives in M4' ",
+    "lint": "eslint . && svelte-check && tsc --noEmit"
+  },
+  "devDependencies": {
+    "@astrojs/svelte": "^9.0.1",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.8",
+    "daisyui": "^5.7.47",
+    "eslint": "^10.12.0",
+    "eslint-plugin-svelte": "^3.23.1",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.4"
+  }
+}
