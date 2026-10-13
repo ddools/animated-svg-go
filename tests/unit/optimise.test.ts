@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest';
-import { optimise } from '../../src/core/parse/optimise';
+import { optimise as run } from '../../src/core/parse/optimise';
 import { PipelineError } from '../../src/core/parse/limits';
+
+const optimise = (input: string) => run(input).svg;
 
 const svg = (body: string, attrs = 'viewBox="0 0 10 10"') =>
   `<?xml version="1.0"?><!DOCTYPE svg><svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" ${attrs}>${body}</svg>`;
@@ -49,4 +51,13 @@ test('non-SVG elements are removed, prefixed attributes are kept', () => {
   expect(out).not.toMatch(/<d:|<p>|namedview|<div/);
   expect(out).toContain('inkscape:label="Layer"');
   expect(out).toContain('<rect');
+});
+
+test('CSS that cannot be inlined is dropped and reported', () => {
+  const kept = run(svg('<style>.a{fill:#f00}</style><rect class="a"/>'));
+  expect(kept.styleDropped).toBe(false);
+  const dropped = run(svg('<style>.a{fill:#f00}@media print{.a{fill:#000}}@keyframes k{to{opacity:0}}</style><rect class="a"/>'));
+  expect(dropped.styleDropped).toBe(true);
+  expect(dropped.svg).not.toContain('<style');
+  expect(dropped.svg).toContain('fill="#f00"');
 });
