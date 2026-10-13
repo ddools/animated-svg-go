@@ -12,7 +12,7 @@
     "preview": "astro preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "corpus": "echo 'pnpm corpus arrives in M1' ",
+    "corpus": "rm -rf tests/corpus/report && (playwright test -c playwright.corpus.config.ts || true) && node tests/corpus/summarise.mjs",
     "parity": "echo 'pnpm parity arrives in M4' ",
     "lint": "eslint . && svelte-check && tsc --noEmit"
   },
