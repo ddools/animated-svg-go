@@ -1,0 +1,3 @@
+{
+  "w3c/masking-mask-01-b.svg": "WebKit only. The file embeds an SVG font (<font>, <font-face>, <glyph>) for the large masked text. The sanitiser removes SVG fonts, so WebKit falls back to a system font. Chromium and Firefox never supported SVG fonts and render the same before and after. Accepted: SVG fonts are deprecated and cannot be exported consistently."
+}

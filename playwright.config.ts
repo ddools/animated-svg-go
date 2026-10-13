@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: 'tests/e2e',
+  testDir: 'tests',
+  testMatch: ['e2e/**/*.spec.ts', 'security/**/*.spec.ts'],
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://localhost:4399' },
   // Built site, not the dev server: only the build applies the CSP.
@@ -10,6 +11,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm build && exec node_modules/.bin/astro preview --port 4399 --ignore-lock',
     url: 'http://localhost:4399',
+    env: { PUBLIC_E2E: '1' },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
