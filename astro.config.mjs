@@ -14,6 +14,8 @@ export default defineConfig({
       // <style> elements and stylesheets still need 'self' or a hash.
       styleDirective: { resources: ["'self'", { resource: "'unsafe-inline'", kind: 'attribute' }] },
       directives: [
+        // No frame-src on purpose: it falls back to this, which is what stops the sandbox
+        // iframe, or anything inside it, from navigating to a real page.
         "default-src 'none'",
         "img-src 'self' data: blob:",
         "font-src 'self' data:",

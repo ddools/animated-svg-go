@@ -19,8 +19,10 @@
   });
 </script>
 
-<!-- No allow-scripts: nothing inside can run. allow-same-origin lets the editor reach in. -->
+<!-- No allow-scripts: nothing inside can run. allow-same-origin lets the editor reach in.
+     inert keeps keyboard focus from reaching links inside the drawing. -->
 <iframe
+  inert
   bind:this={iframe}
   onload={() => (loaded = true)}
   sandbox="allow-same-origin"
