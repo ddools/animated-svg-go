@@ -60,4 +60,5 @@ test('CSS that cannot be inlined is dropped and reported', () => {
   expect(dropped.styleDropped).toBe(true);
   expect(dropped.svg).not.toContain('<style');
   expect(dropped.svg).toContain('fill="#f00"');
+  expect(run(svg('<STYLE>.a{fill:#f00}</STYLE><rect/>'))).toMatchObject({ styleDropped: true, svg: expect.not.stringMatching(/style/i) });
 });

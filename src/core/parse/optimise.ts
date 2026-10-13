@@ -51,7 +51,8 @@ export function optimise(svg: string): Optimised {
     fn: () => ({
       element: {
         enter: (node, parent) => {
-          if (node.name !== 'style') return;
+          // Any case: the sanitiser's HTML parser lowercases tag names.
+          if (node.name.toLowerCase() !== 'style') return;
           styleDropped = true;
           parent.children = parent.children.filter((child) => child !== node);
         },

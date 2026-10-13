@@ -32,6 +32,14 @@ export type Inventory = {
   measure(key: string): Measured | undefined;
 };
 
+function attempt<T>(read: () => T): T | undefined {
+  try {
+    return read();
+  } catch {
+    return undefined;
+  }
+}
+
 export function buildInventory(root: SVGSVGElement, labels: Record<string, string>): Inventory {
   const nodes = new Map<string, InventoryNode>();
   const elements = new Map<string, SVGGraphicsElement>();
@@ -69,11 +77,12 @@ export function buildInventory(root: SVGSVGElement, labels: Record<string, strin
     const strokeWidth = stroke === 'none' ? 0 : parseFloat(style.strokeWidth) || 0;
     // The wrapper's box includes the element's own transform, which is the space effects pivot in.
     const wrapper = element.parentElement?.hasAttribute('data-anim') ? (element.parentElement as unknown as SVGGraphicsElement) : element;
-    const box = wrapper.getBBox();
+    // Firefox throws from both calls for elements that are not rendered (display none, inside defs).
+    const box = attempt(() => wrapper.getBBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
     const pad = strokeWidth / 2;
     const measured: Measured = {
       bbox: { x: box.x - pad, y: box.y - pad, width: box.width + strokeWidth, height: box.height + strokeWidth },
-      length: 'getTotalLength' in element ? (element as unknown as SVGGeometryElement).getTotalLength() : undefined,
+      length: 'getTotalLength' in element ? attempt(() => (element as unknown as SVGGeometryElement).getTotalLength()) : undefined,
       fill: style.fill,
       stroke,
       strokeWidth,
