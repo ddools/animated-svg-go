@@ -10,6 +10,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm build && exec node_modules/.bin/astro preview --port 4399 --ignore-lock',
     url: 'http://localhost:4399',
+    env: { PUBLIC_E2E: '1' },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
