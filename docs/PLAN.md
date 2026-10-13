@@ -32,12 +32,12 @@ A stage is not done until step 6. The tables below list only what is specific to
 | # | Action | Owner | Gate |
 | --- | --- | --- | --- |
 | 1 | Create the GitHub repo and the Vercel project. Link them | Der | |
-| 2 | `git init`, Astro, Svelte, Tailwind, daisyUI, static output | Sonnet | |
-| 3 | Vitest, Playwright (three engines), ESLint, svelte-check, `tsc` | Sonnet | |
-| 4 | All `pnpm` scripts. `corpus` and `parity` as stubs | Sonnet | |
-| 5 | GitHub Actions: lint, unit, e2e on every PR | Sonnet | |
-| 6 | Strict CSP on the app page | Sonnet | Opus reviews |
-| 7 | Bring `CLAUDE.md` status, layout and commands up to date | Haiku | Opus reviews |
+| 2 | `git init`, Astro 7, Svelte, Tailwind, daisyUI, static output | Opus | |
+| 3 | Vitest, Playwright (three engines), ESLint, svelte-check, `tsc` | Opus | |
+| 4 | All `pnpm` scripts. `corpus` and `parity` as stubs | Opus | |
+| 5 | GitHub Actions: lint, unit, e2e on every PR | Opus | |
+| 6 | Strict CSP on the app page | Opus | |
+| 7 | Bring `CLAUDE.md` status, layout and commands up to date | Opus | |
 | 8 | Open the Vercel preview in Chrome, Firefox and Safari | Der | Sign-off |
 
 ## Stage 1. Normalisation pipeline and corpus (M1, risk 1)

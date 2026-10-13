@@ -6,10 +6,10 @@ The first three milestones retire the biggest technical risks. Don't skip ahead 
 
 ## M0. Scaffold
 
-Lead: Sonnet 5.5
+Lead: Opus 5.5 (the main session built it directly)
 
 - `git init`, GitHub repo.
-- Astro 6 + `@astrojs/svelte` + Svelte 5 + Tailwind 4 + daisyUI 5. Static output.
+- Astro 7 + `@astrojs/svelte` + Svelte 5 + Tailwind 4 + daisyUI 5. Static output.
 - Vitest, Playwright with chromium, firefox and webkit projects, ESLint, svelte-check, `tsc --noEmit`.
 - All `pnpm` scripts from `CLAUDE.md`, even if `corpus` and `parity` are stubs.
 - GitHub Actions: lint, unit, e2e (all three engines) on every PR.
