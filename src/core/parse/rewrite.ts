@@ -1,0 +1,122 @@
+import { fnv1a } from './hash';
+import { toUserUnits } from './units';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+export const ANIMATABLE = new Set([
+  'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image', 'use', 'g',
+]);
+// Content here is referenced, not rendered in place. Stamped, never wrapped.
+const NO_WRAP_ANCESTORS = 'defs, symbol, clipPath, mask, pattern, marker';
+const ID_LIST_ATTRS = new Set(['aria-labelledby', 'aria-describedby']);
+const LOCAL_URL = /url\(\s*(['"]?)#(.*?)\1\s*\)/g;
+
+export type Warning = 'no-size';
+
+/** Rewrites one attribute value so local references point at the namespaced IDs. Pure. */
+export function rewriteRefs(name: string, value: string, prefix: string): string {
+  if (name === 'id') return prefix + value;
+  if (name === 'href' || name === 'xlink:href') return value.startsWith('#') ? `#${prefix}${value.slice(1)}` : value;
+  if (ID_LIST_ATTRS.has(name)) {
+    return value.split(/\s+/).filter(Boolean).map((id) => prefix + id).join(' ');
+  }
+  return value.includes('url(') ? value.replace(LOCAL_URL, `url(#${prefix}$2)`) : value;
+}
+
+function guaranteeViewBox(root: SVGSVGElement, warnings: Warning[]): void {
+  if (!root.hasAttribute('viewBox')) {
+    const width = toUserUnits(root.getAttribute('width'));
+    const height = toUserUnits(root.getAttribute('height'));
+    if (width === null || height === null) warnings.push('no-size');
+    // 300 x 150 is the size browsers give a replaced element with no intrinsic size.
+    root.setAttribute('viewBox', `0 0 ${width ?? 300} ${height ?? 150}`);
+  }
+  root.removeAttribute('width');
+  root.removeAttribute('height');
+}
+
+function namespaceIds(elements: Element[], prefix: string): void {
+  for (const element of elements) {
+    for (const attr of Array.from(element.attributes)) {
+      const next = rewriteRefs(attr.name, attr.value, prefix);
+      if (next !== attr.value) attr.value = next;
+    }
+  }
+}
+
+function indexChain(element: Element, root: Element): string {
+  const chain: number[] = [];
+  for (let node = element; node !== root && node.parentElement; node = node.parentElement) {
+    chain.push(Array.prototype.indexOf.call(node.parentElement.children, node));
+  }
+  return chain.reverse().join('.');
+}
+
+/** Stamps data-k on every animatable element. Structural only; M2 adds the geometry fingerprint. */
+function stampKeys(elements: Element[], root: Element): Element[] {
+  const seen = new Set<string>();
+  const stamped: Element[] = [];
+  for (const element of elements) {
+    if (!ANIMATABLE.has(element.localName)) continue;
+    const seed = `${element.localName}:${indexChain(element, root)}`;
+    let key = `k${fnv1a(seed)}`;
+    for (let salt = 1; seen.has(key); salt++) key = `k${fnv1a(`${seed}#${salt}`)}`;
+    seen.add(key);
+    element.setAttribute('data-k', key);
+    stamped.push(element);
+  }
+  return stamped;
+}
+
+function wrap(stamped: Element[], root: Element): void {
+  const doc = root.ownerDocument;
+  for (const element of stamped) {
+    const parent = element.parentElement;
+    if (!parent || element.closest(NO_WRAP_ANCESTORS)) continue;
+    // <switch> picks its first direct child that passes the conditional tests.
+    // A wrapper would always pass and change which branch renders.
+    if (parent.localName === 'switch') continue;
+    const wrapper = doc.createElementNS(SVG_NS, 'g');
+    wrapper.setAttribute('data-anim', '');
+    wrapper.setAttribute('data-for', element.getAttribute('data-k')!);
+    parent.insertBefore(wrapper, element);
+    wrapper.appendChild(element);
+  }
+}
+
+function readLabels(stamped: Element[], editorLabels: WeakMap<Element, string>): Record<string, string> {
+  const labels: Record<string, string> = {};
+  for (const element of stamped) {
+    const title = Array.prototype.find.call(element.children, (child: Element) => child.localName === 'title');
+    const label =
+      editorLabels.get(element) ??
+      element.getAttribute('data-name') ??
+      title?.textContent ??
+      element.getAttribute('aria-label') ??
+      element.getAttribute('id');
+    if (label?.trim()) labels[element.getAttribute('data-k')!] = label.trim();
+  }
+  return labels;
+}
+
+/**
+ * Rewrites a sanitised tree in place into the shape the rest of the app relies on:
+ * a viewBox, namespaced IDs, a data-k on every animatable element and a wrapper around each.
+ */
+export function rewrite(
+  root: SVGSVGElement,
+  editorLabels: WeakMap<Element, string>,
+  idPrefix: string,
+): { labels: Record<string, string>; warnings: Warning[] } {
+  const warnings: Warning[] = [];
+  const elements = [root, ...Array.from(root.querySelectorAll('*'))];
+
+  guaranteeViewBox(root, warnings);
+  // Keys and labels are read before IDs are namespaced and before wrappers shift the tree.
+  const stamped = stampKeys(elements.slice(1), root);
+  const labels = readLabels(stamped, editorLabels);
+  namespaceIds(elements, idPrefix);
+  wrap(stamped, root);
+
+  return { labels, warnings };
+}
