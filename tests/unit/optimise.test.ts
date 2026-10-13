@@ -36,3 +36,17 @@ test('malformed XML is rejected as not-svg', () => {
   expect(() => optimise('<svg><g></svg>')).toThrowError(PipelineError);
   expect(() => optimise('not an svg at all <')).toThrowError(PipelineError);
 });
+
+test('non-SVG elements are removed, prefixed attributes are kept', () => {
+  const out = optimise(
+    svg(
+      '<d:case xmlns:d="http://example.test/d"><d:text xmlns="http://www.w3.org/1999/xhtml"><p>Notes</p></d:text></d:case>' +
+        '<sodipodi:namedview xmlns:sodipodi="http://example.test/s"/>' +
+        '<div xmlns="http://www.w3.org/1999/xhtml">html</div>' +
+        '<g inkscape:label="Layer"><svg xmlns="http://www.w3.org/2000/svg"><rect/></svg></g>',
+    ),
+  );
+  expect(out).not.toMatch(/<d:|<p>|namedview|<div/);
+  expect(out).toContain('inkscape:label="Layer"');
+  expect(out).toContain('<rect');
+});
