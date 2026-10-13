@@ -12,7 +12,9 @@ const files = (readdirSync(here + 'files', { recursive: true }) as string[]).fil
 // Longest side of every render, in CSS pixels. Small icons are scaled up so a diff means something.
 const RENDER_SIZE = 512;
 
-const TOLERANCE = 0.001;
+// Share of pixels allowed to differ. WebKit draws hairline seams at pattern tile edges that shift
+// with any change to the tree, measured at up to 0.17%. Real regressions seen so far were 3% and up.
+const TOLERANCE = 0.0025;
 
 type Shot = { png: Buffer; width: number; height: number };
 
@@ -73,7 +75,6 @@ for (const file of files) {
     const compared = compare(before.png, after.png);
     if ('reason' in compared) return record({ pass: false, reason: compared.reason });
     const { ratio } = compared;
-    // Identical means at most 0.1% of pixels differ.
     let pass = ratio <= TOLERANCE;
     let noisePercent: number | undefined;
     if (!pass) {
