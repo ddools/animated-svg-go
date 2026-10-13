@@ -43,7 +43,10 @@ test('a dropped file and pasted SVG text both load', async ({ page }) => {
   await page.evaluate((text) => {
     const data = new DataTransfer();
     data.setData('text/plain', text);
-    window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data }));
+    // Firefox ignores clipboardData passed to the constructor, so attach it afterwards.
+    const event = new ClipboardEvent('paste');
+    Object.defineProperty(event, 'clipboardData', { value: data });
+    window.dispatchEvent(event);
   }, SIMPLE.replace('Layer one', 'Pasted layer'));
   await expect(page.getByText('Pasted SVG')).toBeVisible();
 });
