@@ -1,9 +1,11 @@
+import { PipelineError } from '../core/parse/limits';
 import { optimise } from '../core/parse/optimise';
 
 self.onmessage = (event: MessageEvent<string>) => {
   try {
     self.postMessage({ ok: true, svg: optimise(event.data) });
   } catch (error) {
-    self.postMessage({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    const code = error instanceof PipelineError ? error.code : 'not-svg';
+    self.postMessage({ ok: false, code, message: error instanceof Error ? error.message : String(error) });
   }
 };

@@ -1,6 +1,7 @@
 import { LIMITS, normalise, PipelineError, type Normalised } from '../core/parse';
+import type { PipelineErrorCode } from '../core/parse/limits';
 
-type Reply = { ok: true; svg: string } | { ok: false; message: string };
+type Reply = { ok: true; svg: string } | { ok: false; code: PipelineErrorCode; message: string };
 
 // A fresh worker per file, so a hung SVGO run can simply be terminated.
 function optimiseInWorker(svg: string): Promise<string> {
@@ -13,7 +14,7 @@ function optimiseInWorker(svg: string): Promise<string> {
     worker.onmessage = (event: MessageEvent<Reply>) => {
       clearTimeout(timer);
       if (event.data.ok) resolve(event.data.svg);
-      else reject(new PipelineError('not-svg', event.data.message));
+      else reject(new PipelineError(event.data.code, event.data.message));
     };
     worker.onerror = (event) => {
       clearTimeout(timer);

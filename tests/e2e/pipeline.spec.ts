@@ -34,7 +34,7 @@ test('namespaces ids and rewrites every reference to them', async ({ page }) => 
       <defs><linearGradient id="g"><stop offset="0"/></linearGradient><rect id="r" width="1" height="1"/></defs>
       <rect fill="url(#g)" style="mask:url(#m)"/><use xlink:href="#r"/><use href="#r"/></svg>`,
   );
-  const prefix = /id="(a[0-9a-f]{4}-)g"/.exec(svg)?.[1];
+  const prefix = /id="(a[0-9a-f]{8}-)g"/.exec(svg)?.[1];
   expect(prefix).toBeTruthy();
   expect(svg).toContain(`aria-labelledby="${prefix}t"`);
   expect(svg).toContain(`fill="url(#${prefix}g)"`);
