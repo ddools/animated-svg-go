@@ -76,7 +76,7 @@ Notes:
 
 ### Layer 2: inert sandbox
 
-The code is `src/editor/sandbox.ts`. It must hold even if layer 1 fails, and is tested that way: `tests/e2e/editor.spec.ts` mounts raw hostile markup, skipping the sanitiser.
+The code is `src/editor/sandbox.ts`. It must hold even if layer 1 fails, and is tested that way: `tests/e2e/editor.spec.ts` mounts raw hostile markup, skipping the sanitiser. A control on a page with no CSP proves the `sandbox` attribute itself is what stops script: the same payload fires without it and stays silent with it.
 
 ```html
 <iframe sandbox="allow-same-origin"></iframe>
@@ -84,8 +84,10 @@ The code is `src/editor/sandbox.ts`. It must hold even if layer 1 fails, and is 
 
 - **No `src`, no `srcdoc`.** The iframe keeps its initial `about:blank` document, which is same-origin with the editor and inherits the page CSP.
 - **Rendered by DOM import.** `mount()` parses the normalised string as XML into an inert document, then `importNode`s it into the iframe. The markup is never parsed as HTML at this sink, so there is no re-parse for a mutation attack to exploit, and it never enters the app document.
-- **No `allow-scripts`**, so nothing inside can run. No `allow-top-navigation`, `allow-popups` or `allow-forms` either.
-- **Its own CSP `<meta>`**, added with DOM calls before the content: `default-src 'none'; style-src-attr 'unsafe-inline'; img-src data: blob:; font-src data:`. Independent of the inherited page policy.
+- **SVG only.** `mount()` removes any element outside the SVG namespace before the import, and turns `<a>` into a plain `<g>`. An XHTML `<iframe>`, `<form>` or `<img>` would otherwise be live in the sandbox, and a link could swap the drawing for an error page.
+- **No `allow-scripts`**, so nothing inside can run. No `allow-top-navigation`, `allow-popups` or `allow-forms` either. The iframe is also `inert`, so keyboard focus cannot reach inside.
+- **The page's `default-src 'none'` with no `frame-src` is load-bearing.** It is what stops the frame navigating itself to a real page. Do not add `frame-src`.
+- **Its own CSP `<meta>`**, added with DOM calls before the drawing is imported: `default-src 'none'; style-src-attr 'unsafe-inline'; img-src data: blob:; font-src data:; base-uri 'none'; form-action 'none'`. Independent of the inherited page policy.
 - **The editor reaches in, nothing reaches out.** The parent reads geometry and calls `element.animate()` through `contentDocument`. Pointer input is taken by an overlay in the parent, which asks `elementFromPoint()` what is underneath. No listener is attached inside the sandboxed document.
 
 Why not `srcdoc`: it would inherit the page CSP just the same, and it parses the markup as HTML a second time.
@@ -97,6 +99,7 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 ### Always
 
 - The app page has a strict CSP (Astro 7 `security.csp`): `default-src 'none'`, hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`. One deliberate allowance: `style-src-attr 'unsafe-inline'`. Chromium reports a violation the moment it parses any style attribute, even in an inert `DOMParser` or DOMPurify document, and uploaded SVGs carry them. `<style>` elements and stylesheets are still restricted.
+- Values read back from the sandbox (labels, computed fill and stroke) are data. In the app, put them in the DOM as text or through the CSSOM, never by building a `style="…"` or HTML string.
 - Generated exports embed user-derived strings only via `JSON.stringify` or XML escaping. Run every export through the sanitiser as a final check, using an export profile: same hooks, but `style` is not forbidden, because the only `<style>` left is the one `css.ts` generated. The upload profile would strip the keyframes. The security-reviewer subagent must review the export profile in M4.
 
 ## 3. Spec and IR
@@ -247,4 +250,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Leftover `<style>` elements are removed in the SVGO worker pass, not left for the sanitiser.
 - 2026-10-13: Inventory geometry is measured lazily. The `data-k` geometry fingerprint moves to "Later" with re-upload rebinding.
 - 2026-10-13: Picking uses an overlay in the parent and `elementFromPoint()`, with no listeners inside the sandbox.
+- 2026-10-13: Security review of M2 part A. Nothing critical or high. Fixed: sandbox tests could pass without the sandbox (now has a no-CSP control), `mount()` accepted non-SVG elements, the sandbox CSP was installed after the import and lacked `base-uri` and `form-action`, `measure()` could throw in Firefox. Links become groups in the sandbox.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
