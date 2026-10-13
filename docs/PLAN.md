@@ -58,16 +58,22 @@ Der's real-Safari timing check moved to Stage 2, when there is a drop zone to us
 
 ## Stage 2. Sandbox render and inventory (M2)
 
+Two PRs to `main`. A merges before B starts.
+
 | # | Action | Owner | Gate |
 | --- | --- | --- | --- |
-| 1 | Sandbox iframe, deny-all CSP, parent bridge to `contentDocument` | Sonnet | Opus and `security-reviewer` |
-| 2 | Inventory per wrapper | Sonnet | Opus reviews |
-| 3 | Drop zone, file picker, paste | Sonnet | |
-| 4 | Layer tree, hover and click picking, select by colour, type, siblings, lasso | Sonnet | |
-| 5 | Size and warnings panel | Sonnet | |
-| 6 | UI copy | Haiku | Der reads it |
-| 7 | WebKit e2e run | `webkit-checker` | |
-| 8 | Load a 5 MB file in all three browsers. Check each stays interactive. Note how long real Safari takes | Der | Sign-off |
+| A1 | Sandbox iframe filled by DOM import, its CSP, the parent bridge | Opus | `security-reviewer` |
+| A2 | Inventory: structure up front, geometry on demand | Opus | |
+| A3 | Drop zone, file picker, paste, error messages | Opus | |
+| A4 | Load-time test on the largest corpus file | Opus | Under 2 s |
+| A5 | Drop the 3.8 MB world map in all three browsers. Check each stays responsive. Note how long real Safari takes | Der | Sign-off, merge A |
+| B1 | Layer tree with keyboard navigation | Opus | |
+| B2 | Hover and click picking, shift-click, lasso | Opus | |
+| B3 | Select same type, fill, stroke, siblings, parent | Opus | |
+| B4 | Size and warnings panel | Opus | |
+| B5 | UI copy | Opus | Der reads it |
+| B6 | WebKit e2e run | `webkit-checker` | |
+| B7 | Hover, click, lasso and use the tree by keyboard in all three browsers | Der | Sign-off, merge B |
 
 ## Stage 3. Spec, IR and preview (M3, risk 2)
 

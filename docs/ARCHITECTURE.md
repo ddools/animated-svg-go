@@ -25,7 +25,7 @@ Order matters: nothing but our own rewrite touches the markup after it is saniti
    - Rejects malformed XML. There is no separate well-formedness parse.
    - Enforces the element and depth caps early, off the main thread, so an oversized file is refused before the sanitiser has to walk it.
    - Removes every element that is not plain SVG (prefixed elements, or a non-SVG `xmlns`). Editor and test-suite metadata embeds XHTML, and under the sanitiser's HTML parser a `<p>` closes the `<svg>` and loses the drawing.
-   - Inlines styles (`inlineStyles` with `onlyMatchedOnce: false`, then `convertStyleToAttrs`), so class-based fills survive the sanitiser dropping `<style>`.
+   - Inlines styles (`inlineStyles` with `onlyMatchedOnce: false`, then `convertStyleToAttrs`), then removes any `<style>` element that is left and reports it. Class-based fills survive; media queries, keyframes and `@font-face` do not.
    Nothing here may merge paths, collapse groups, rename IDs, round numbers or strip editor labels. The worker is terminated after 10 s.
 3. **Sanitise.** Main thread. See section 2. Editor layer names (`inkscape:label`, `serif:id`, `sketch:name`) are read inside a sanitiser hook, as plain strings, just before those attributes are stripped.
 4. **Tree caps.** Element count (20,000) and nesting depth (64) again, on the sanitised tree. Plus an expansion cap: at most 200,000 shapes once every `<use>` is followed, so a few hundred nested `<use>` cannot render billions.
@@ -41,8 +41,13 @@ Order matters: nothing but our own rewrite touches the markup after it is saniti
 
 Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s optimise, 1.1 s sanitise, 0.5 s rewrite. WebKit 0.9 s, 0.8 s, 0.4 s. Sanitise and rewrite block the main thread. The caps stay as they are; M2's "loads in under 2 s" target needs this revisited.
 
-7. **Render** into the sandbox iframe (section 2, layer 2).
-8. **Inventory.** After layout, per wrapper: `getBBox()` (includes the child's authored transform, in the wrapper's space), `getTotalLength()` for stroke-capable shapes, type, fill/stroke presence, stroke width, closed path, filter applied, inside clip/mask/pattern/marker, `vector-effect`, node count. Flags: `heavyFilter`, `embeddedRaster`, `textNeedsFont`, `degenerate` (zero-size bbox), `preserveAspectRatioNone`.
+7. **Render** into the sandbox iframe (section 2, layer 2). Wait for the iframe's `load` event first: Firefox replaces a new iframe's first document when it finishes loading.
+8. **Inventory.** `core/parse/inventory.ts`, built from the live tree in the sandbox.
+   - Up front, per `data-k` element: type, label, parent, children, `referenced` (inside `defs`, `symbol`, `clipPath`, `mask`, `pattern`, `marker`), `hasFilter`. This is cheap.
+   - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, `getTotalLength()` for shapes, computed fill, stroke and stroke width, `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
+   - Still to add when an effect needs them: closed path, `vector-effect`, heavy filter, `preserveAspectRatio="none"`, text that needs a font.
+
+Measured on the largest real corpus file (3.8 MB world map, 5,444 elements), from choosing the file to seeing it: 1.7 s in Chromium, 1.15 s in WebKit, headless on an M-series Mac with nothing else running.
 
 Animatable types: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `text`, `image`, `use`, `g`. Exclude descendants of `defs`, `symbol`, `clipPath`, `mask`, `pattern`, `marker` from the default tree (show them in an advanced view).
 
@@ -61,7 +66,7 @@ The code is `src/core/parse/sanitise.ts`. It is the source of truth; this sectio
 - **Every other attribute** is dropped unless every `url(` in it is a complete, local reference: `url(#fragment)` with no whitespace, brackets, quotes or escapes inside the fragment. Unterminated, remote and oddly quoted forms all fail. It is also dropped if it names another CSS loader (`image-set`, `@import`, `expression`, `src(`, `image(`) or pairs a backslash with a bracket. The checks are linear in the length of the value.
 - **Stray `xmlns`.** A non-SVG `xmlns` on any element is removed. Under the HTML parser it is a plain attribute, but WebKit serialises it as written and an XML parser would then move the subtree into that namespace.
 - **Clobbering guard off, ids prefixed instead.** `SANITIZE_DOM: false`, because the guard deleted legitimate ids such as `blur` and `body`. The rewrite pass prefixes every id, so none can shadow a DOM property. `name` and `xml:id` are forbidden outright.
-- **Uploaded `<style>` is dropped.** SVGO inlines what it can first. Whatever is left (media queries, keyframes, `@font-face`) goes, and the pipeline returns a `style-dropped` warning.
+- **Uploaded `<style>` is dropped.** SVGO inlines what it can and removes the rest in the worker, returning a `style-dropped` warning. The sanitiser still forbids `style` as a backstop.
 
 Tests: `tests/security/`. Each payload is normalised, checked structurally (as XML and again as HTML), then loaded with no sandbox and no CSP, inline in HTML and as a standalone SVG document. Links get a real click. Any dialog or network request fails. Control tests prove the trap fires on raw script, handler, `javascript:` link, image and CSS `url()` payloads.
 
@@ -71,23 +76,19 @@ Notes:
 
 ### Layer 2: inert sandbox
 
-```html
-<iframe sandbox="allow-same-origin" srcdoc="…"></iframe>
-```
-
-srcdoc content:
+The code is `src/editor/sandbox.ts`. It must hold even if layer 1 fails, and is tested that way: `tests/e2e/editor.spec.ts` mounts raw hostile markup, skipping the sanitiser.
 
 ```html
-<!doctype html>
-<meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:">
-<style>html,body{margin:0;height:100%}svg{width:100%;height:100%}</style>
-<!-- sanitised, rewritten SVG here -->
+<iframe sandbox="allow-same-origin"></iframe>
 ```
 
-No `allow-scripts`, so nothing inside can run. The parent reaches in through `iframe.contentDocument` to call `element.animate()` and read geometry.
+- **No `src`, no `srcdoc`.** The iframe keeps its initial `about:blank` document, which is same-origin with the editor and inherits the page CSP.
+- **Rendered by DOM import.** `mount()` parses the normalised string as XML into an inert document, then `importNode`s it into the iframe. The markup is never parsed as HTML at this sink, so there is no re-parse for a mutation attack to exploit, and it never enters the app document.
+- **No `allow-scripts`**, so nothing inside can run. No `allow-top-navigation`, `allow-popups` or `allow-forms` either.
+- **Its own CSP `<meta>`**, added with DOM calls before the content: `default-src 'none'; style-src-attr 'unsafe-inline'; img-src data: blob:; font-src data:`. Independent of the inherited page policy.
+- **The editor reaches in, nothing reaches out.** The parent reads geometry and calls `element.animate()` through `contentDocument`. Pointer input is taken by an overlay in the parent, which asks `elementFromPoint()` what is underneath. No listener is attached inside the sandboxed document.
 
-**Open for M2:** an `srcdoc` iframe inherits the parent page's CSP. The editor page's hash-based `style-src` would block the inline `<style>` and `style` attributes inside the sandbox. M2 must decide how the sandbox document gets inline styles (for example a blob URL or a dedicated static page with its own policy) and re-check invariant 1 against the choice.
+Why not `srcdoc`: it would inherit the page CSP just the same, and it parses the markup as HTML a second time.
 
 ### Layer 3: storage and sharing (not v1)
 
@@ -95,7 +96,7 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 
 ### Always
 
-- The app page itself gets a strict CSP (Astro 7 `security.csp`: hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`).
+- The app page has a strict CSP (Astro 7 `security.csp`): `default-src 'none'`, hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`. One deliberate allowance: `style-src-attr 'unsafe-inline'`. Chromium reports a violation the moment it parses any style attribute, even in an inert `DOMParser` or DOMPurify document, and uploaded SVGs carry them. `<style>` elements and stylesheets are still restricted.
 - Generated exports embed user-derived strings only via `JSON.stringify` or XML escaping. Run every export through the sanitiser as a final check, using an export profile: same hooks, but `style` is not forbidden, because the only `<style>` left is the one `css.ts` generated. The upload profile would strip the keyframes. The security-reviewer subagent must review the export profile in M4.
 
 ## 3. Spec and IR
@@ -241,4 +242,9 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: DOMPurify's clobbering guard is off (`SANITIZE_DOM: false`) because it removed ids such as `blur`. Every id is prefixed instead, and `name` is forbidden.
 - 2026-10-13: Security review of M1 (Opus subagent). No script execution found. Fixed: two `url()` forms that could reach the network, a quadratic regex on the main thread, no limit on `<use>` expansion, caps enforced only after sanitising, spoofable `data-k`/`data-anim`, leftover SMIL tags, `xml:id`, stray `xmlns`. ID prefix widened from 16 to 32 bits.
 - 2026-10-13: Embedded SVG fonts are dropped. Only WebKit renders them.
+- 2026-10-13: Sandbox is an iframe with no `src` or `srcdoc`, filled by `importNode` from an XML parse. Settles the M0 question about `srcdoc` inheriting the page CSP.
+- 2026-10-13: Page CSP allows `style-src-attr 'unsafe-inline'`. Chromium reports any parsed style attribute, inert document or not. Chosen over carrying styles out-of-band through the sanitiser path.
+- 2026-10-13: Leftover `<style>` elements are removed in the SVGO worker pass, not left for the sanitiser.
+- 2026-10-13: Inventory geometry is measured lazily. The `data-k` geometry fingerprint moves to "Later" with re-upload rebinding.
+- 2026-10-13: Picking uses an overlay in the parent and `elementFromPoint()`, with no listeners inside the sandbox.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
