@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: 'tests/e2e',
+  testDir: 'tests',
+  testMatch: ['e2e/**/*.spec.ts', 'security/**/*.spec.ts'],
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://localhost:4399' },
   // Built site, not the dev server: only the build applies the CSP.
