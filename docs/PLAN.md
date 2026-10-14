@@ -129,15 +129,34 @@ Done. Merged in PRs #10, #13 and #14. Decided with Der: Colour shift is solid co
 
 ## Stage 6. GIF and MP4 export (M6, risk 4)
 
+Plan approved 14 Oct. Runs before the rest of Stage 5: raster export reads only the IR, so it doesn't wait on the effects, and it is the last open risk. Branch `feat/m6-raster` from `main` once PR #10 merges.
+
+Approved decisions:
+
+- Frames skip the whole-file re-sanitise. `exportMarkup` splits into a once-per-export check and a per-frame style splice. Every frame's style still passes `exportStyleIsSafe`.
+- No font embedding. Uploads lose `@font-face` in the pipeline, so preview, SVG export and raster frames all use installed fonts. A `<text>` parity scenario proves it.
+- Stream, hold nothing: one canvas, each frame straight into the encoder.
+- Frame loop on the main thread with yielding and an `AbortSignal`.
+- Mediabunny pinned at 1.60.0, H.264, `canEncodeVideo` check, GIF as the fallback. gifenc 1.0.3, quantised on the main thread at 720 px or less.
+- Placeholder caps of 1080 px wide, 10 s and 300 frames until item 6.
+
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
-| 1 | Frame loop: yielding, memory strategy, cancel | Opus | |  |
-| 2 | Font embedding or fallback warning | Opus | |  |
-| 3 | MP4 through Mediabunny with capability detection | Sonnet | Opus reviews |  |
-| 4 | GIF through gifenc with a size estimate | Sonnet | Opus reviews |  |
-| 5 | Resolution and fps presets, progress UI | Sonnet | |  |
-| 6 | Measure canvas and memory limits in Chrome and Safari | Der | Opus sets the caps from the numbers |  |
-| 7 | Export a 5 s, 30 fps, 1080p MP4 in Chrome and Safari | Der | Sign-off |  |
+| 1 | Spike: one 1080p frame on a canvas in WebKit. Canvas not tainted, `decode()` ready to paint | Opus | Re-plan if it fails |  |
+| 2 | Split `exportMarkup`. Frame loop: yielding, streaming, cancel | Opus | `security-reviewer` on the split |  |
+| 3 | Raster parity scenario, plus a `<text>` fixture (replaces font embedding) | Opus | |  |
+| 4 | MP4 through Mediabunny with capability detection | Sonnet | Opus reviews |  |
+| 5 | GIF through gifenc with a size estimate | Sonnet | Opus reviews |  |
+| 6 | Resolution, fps and background presets. Progress and cancel UI | Sonnet builds, Haiku drafts copy | Der reads the copy |  |
+| 7 | Bench hook. Measure 5 s, 30 fps at 720 and 1080 in Chrome and Safari | Opus builds, Der measures | Opus sets the caps from the numbers |  |
+| 8 | WebKit e2e and parity runs | `webkit-checker`, `corpus-runner` | |  |
+| 9 | Export a 5 s, 30 fps, 1080p MP4 and a GIF in Chrome and Safari | Der | Sign-off |  |
+
+## Parked
+
+| Item | Since | Notes |
+| --- | --- | --- |
+| WebKit parity fails on CI's Linux runner | M4 (PR #9) | Preview against CSS export at the first sample time, 0.08% to 5.6% of pixels. Passes to the pixel in WebKit on a Mac. Linux WebKit is a different port from Safari. Options when picked up: a macOS runner for parity (private repo, about 10x minutes), Chromium-only parity on Linux, or find the cause. Until then the `parity` check stays red and Der runs `pnpm parity` locally before merging |
 
 ## Stage 7. Hardening and launch (M7)
 
