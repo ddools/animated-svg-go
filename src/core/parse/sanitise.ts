@@ -21,6 +21,13 @@ const FORBID_TAGS = [
   'set', 'animate', 'animateMotion', 'animateTransform', 'animateColor', 'mpath', 'discard',
 ];
 
+/**
+ * 'upload' is for untrusted files. 'export' is the final check on our own output: the same rules,
+ * except that it keeps the one <style> css.ts generated, and refuses the export if that style
+ * could load anything.
+ */
+export type Profile = 'upload' | 'export';
+
 export type Sanitised = {
   root: SVGSVGElement;
   /** Layer names from editor-only attributes, read as plain strings before they were stripped. */
@@ -44,7 +51,7 @@ function cssValueIsSafe(value: string): boolean {
 }
 
 /** Sanitises an SVG string into an inert DOM tree. The tree is never adopted into the app document. */
-export function sanitise(svg: string): Sanitised {
+export function sanitise(svg: string, profile: Profile = 'upload'): Sanitised {
   const purify = DOMPurify(window);
   const editorLabels = new WeakMap<Element, string>();
 
@@ -72,7 +79,7 @@ export function sanitise(svg: string): Sanitised {
     // DOMPurify disallows <use> by default. Real files need it. The href hook above
     // restricts it to same-document references.
     ADD_TAGS: ['use'],
-    FORBID_TAGS,
+    FORBID_TAGS: profile === 'export' ? FORBID_TAGS.filter((tag) => tag !== 'style') : FORBID_TAGS,
     // DOMPurify drops ids that shadow DOM properties (id="blur", "body", "title"), which breaks
     // real files. The rewrite pass prefixes every id, so no id can collide. `name` has no use in SVG.
     SANITIZE_DOM: false,
@@ -83,5 +90,13 @@ export function sanitise(svg: string): Sanitised {
 
   const root = (body as Element).firstElementChild;
   if (!root || root.localName !== 'svg') throw new PipelineError('not-svg', 'No <svg> root element.');
+  if (profile === 'export') {
+    // Only css.ts writes a <style>, and it writes one, with no "<" in it. Anything else means the export is not ours.
+    const styles = root.querySelectorAll('style');
+    const text = styles[0]?.textContent ?? '';
+    if (styles.length > 1 || text.includes('<') || !cssValueIsSafe(text)) {
+      throw new Error('Export refused: unexpected style.');
+    }
+  }
   return { root: root as SVGSVGElement, editorLabels };
 }
