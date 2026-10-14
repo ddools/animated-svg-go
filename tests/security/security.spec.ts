@@ -142,10 +142,13 @@ test.describe('hostile files come out inert', () => {
   }
 });
 
-/** A spin and a draw on the first animatable element, as the IR would have them. No tracks if there is none. */
+/**
+ * Every kind of output on the first animatable element, as the IR would have them: two stacked spins
+ * (animation-composition, composite 'add'), a spring's linear() stops, a draw and a fill. No tracks if there is none.
+ */
 function animation(key: string | undefined): IR {
-  const frames = (from: string, to: string) => [
-    { offset: 0, value: from, easing: 'linear' },
+  const frames = (from: string, to: string, easing = 'linear') => [
+    { offset: 0, value: from, easing },
     { offset: 1, value: to, easing: 'linear' },
   ];
   return {
@@ -155,7 +158,9 @@ function animation(key: string | undefined): IR {
     tracks: key
       ? [
           { target: key, property: 'transform', keyframes: frames('rotate(0deg)', 'rotate(90deg)') },
+          { target: key, property: 'transform', keyframes: frames('scale(0)', 'scale(1)', 'linear(0 0%, 1.2 40%, 1 100%)') },
           { target: key, property: 'stroke-dashoffset', keyframes: frames('10', '0') },
+          { target: key, property: 'fill', keyframes: frames('rgb(255, 0, 0)', 'rgb(0, 0, 255)') },
         ]
       : [],
   };
@@ -173,6 +178,13 @@ test.describe('hostile files stay inert once exported', () => {
         ([svg, ir]) => ({ svg: window.__asg!.exports.animatedSvg(svg, ir), js: window.__asg!.exports.jsSnippet(svg, ir) }),
         [out.ok ? out.svg : '', animation(key)] as const,
       );
+      // The new output forms really are in what gets detonated.
+      if (key) {
+        expect(exported.svg).toContain('animation-composition:add,add');
+        expect(exported.svg).toContain('linear(0 0%, 1.2 40%, 1 100%)');
+        expect(exported.svg).toContain('fill:rgb(255, 0, 0)');
+        expect(exported.js).toContain('"add"');
+      }
       expect(await page.evaluate(inspect, { markup: exported.svg, exported: true })).toEqual([]);
       for (const sink of SINKS) {
         expect(await detonate(context, exported.svg, sink), sink).toEqual({ dialogs: [], requests: [] });
