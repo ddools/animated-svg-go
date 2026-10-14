@@ -14,6 +14,9 @@ import { wiggle, WiggleParams } from './effects/wiggle';
 // No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
 z.config({ jitless: true });
 
+// No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
+z.config({ jitless: true });
+
 const unit = z.number().min(0).max(1);
 const key = z.string().min(1).max(64);
 
