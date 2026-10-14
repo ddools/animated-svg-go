@@ -1,6 +1,8 @@
 import { LIMITS, PipelineError } from '../core/parse';
 import type { PipelineErrorCode } from '../core/parse/limits';
 import { normaliseFile } from './pipeline';
+import { project } from './project.svelte';
+import type { Spec } from '../core/spec/schema';
 import { selection } from './selection.svelte';
 import { editor } from './state.svelte';
 
@@ -17,7 +19,8 @@ function fail(code: PipelineErrorCode): void {
   editor.error = MESSAGES[code];
 }
 
-export async function loadText(text: string, name = 'Pasted SVG'): Promise<void> {
+/** A spec comes along only when restoring an autosave. */
+export async function loadText(text: string, name = 'Pasted SVG', spec?: Spec): Promise<void> {
   editor.status = 'loading';
   editor.fileName = name;
   editor.originalBytes = new TextEncoder().encode(text).length;
@@ -26,6 +29,7 @@ export async function loadText(text: string, name = 'Pasted SVG'): Promise<void>
     editor.sandbox = undefined;
     editor.inventory = undefined;
     selection.clear();
+    project.open(name, text, spec);
     editor.result = result;
     editor.status = 'ready';
   } catch (error) {

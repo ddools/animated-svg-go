@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { loadFile } from './load';
+  import { loadFile, loadText } from './load';
+  import { savedProject } from './project.svelte';
   import { editor } from './state.svelte';
 
   let { compact = false }: { compact?: boolean } = $props();
@@ -25,6 +26,14 @@
       <span class="text-sm opacity-70">Your file never leaves your browser.</span>
       <input type="file" accept=".svg,image/svg+xml" class="hidden" onchange={pick} />
     </label>
+    <!-- Offered, never automatic: a file that hangs the tab must not reload itself forever. -->
+    {#await savedProject() then project}
+      {#if project}
+        <button type="button" class="btn mt-4" onclick={() => loadText(project.text, project.fileName, project.spec ?? undefined)}>
+          Pick up where you left off: {project.fileName}
+        </button>
+      {/if}
+    {/await}
     {#if editor.status === 'error'}
       <p role="alert" class="alert alert-error mt-4 max-w-xl">{editor.error}</p>
     {/if}
