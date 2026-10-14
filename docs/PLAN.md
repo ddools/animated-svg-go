@@ -138,7 +138,7 @@ Approved decisions:
 - Stream, hold nothing: one canvas, each frame straight into the encoder.
 - Frame loop on the main thread with yielding and an `AbortSignal`.
 - Mediabunny pinned at 1.60.0, H.264, `canEncodeVideo` check, GIF as the fallback. gifenc 1.0.3, quantised on the main thread at 720 px or less.
-- Placeholder caps of 1080 px wide, 10 s and 300 frames until item 6.
+- Placeholder caps of 1080 px wide, 10 s and 300 frames until item 7.
 
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
