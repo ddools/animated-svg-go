@@ -239,11 +239,13 @@ Exports are made on demand when the user copies or downloads, not on every edit:
 
 ### Parity
 
-`pnpm parity` (`tests/parity/`, Chromium and WebKit, also in CI). For eight scenarios at four fixed times, it renders three frames in one 512 × 384 box and pixel-diffs them: the editor's WAAPI preview after a seek; the animated SVG export in `<img>`, frozen at t by an injected `animation-play-state: paused; animation-delay: -t`; and the sampler's static frame in `<img>`. Times avoid jumps, run ends and half turns. It also checks that `prefers-reduced-motion` reaches an SVG in `<img>`, with a control.
+`pnpm parity` (`tests/parity/`, Chromium and WebKit, also in CI). For eight scenarios at four fixed times, it renders three frames in one 512 × 384 box and pixel-diffs them: the editor's WAAPI preview after a seek; the animated SVG export in `<img>`, frozen at t by an injected `animation-play-state: paused; animation-delay: -t` with its reduced-motion gate opened (see section 6); and the sampler's static frame in `<img>`. Times avoid jumps, run ends and half turns. It also checks that `prefers-reduced-motion` reaches an SVG in `<img>`, with a control.
 
 Since M6 it also draws every scenario through the frame loop at 3 fps and compares each canvas with the sampler frame in `<img>`. A `<text>` in the fixture checks installed fonts on every path. Chromium antialiases live text slightly differently from text in an image (0.06% to 0.09% measured, all on the glyphs), so the text scenario allows 0.2% for preview against export only. Raster frames match the sampler at the usual tolerance in both engines.
 
 Measured in M4, headless on an M-series Mac: every scenario passes in both engines. The worst diff was 0.002% of pixels (Chromium, preview against CSS export). WebKit and the sampler matched to the pixel. Tolerance is 0.05%; a control test shows a frame 50 ms out fails it by more than ten times.
+
+On CI's Linux runner, from PR #19: both engines pass once the CSS shot opens the reduced-motion gate and Chromium runs with `--disable-lcd-text`. Both are about the runner, not the exports. See section 6.
 
 ### Raster frame loop
 
@@ -275,6 +277,8 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 - **Accessibility:** reduced-motion fallback in every SVG, CSS and JS export (GIF and MP4 can't have one); keep `<title>`; add `role="img"` and `aria-label`; layer tree is the keyboard alternative to canvas picking; editor autoplay pauses under reduced motion.
 - **Targets:** desktop Chrome, Firefox and Safari on Mac. Mobile is not a v1 target. If it becomes one, measure iOS Low Power Mode rAF throttling (~30 fps) and the iOS canvas area cap (~16.7 MP) on a real device first. Both figures are unverified.
 - **Reduced motion in `<img>`:** measured in M4 under Playwright emulation, neither Chromium nor WebKit passes `prefers-reduced-motion` into an SVG shown as an image. It always matches `no-preference`, so an exported SVG in `<img>` keeps moving. Inline exports and the JS snippet do stop. Whether the real macOS setting reaches SVG-as-image is unverified: Der checks in Safari and Chrome. If it doesn't, the fix is on the host page (`<picture>` with a `prefers-reduced-motion` source), and the export panel could say so.
+- **Linux CI, WebKit:** an SVG in `<img>` on the headless Linux runner does not match `prefers-reduced-motion: no-preference`, so a CSS export there never plays and shows as authored. Parity's CSS shot swaps the gate for `@media all`. Reduced motion is tested on inline exports.
+- **Linux CI, Chromium text:** text in an `<img>` screenshot is antialiased subpixel, with colour fringes; on a canvas and in live preview it is greyscale. About 0.09% of pixels, all on the glyphs. macOS never does subpixel. Parity runs Chromium with `--disable-lcd-text`.
 - **Unverified, measure in each browser:** Safari `linear()` support since 17.2.
 
 ## 7. Approved dependencies
@@ -343,5 +347,6 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Stagger is an optional setting on every effect, not an effect type. Each target is planned on its own, not phase-shifted with a negative delay.
 - 2026-10-14: Colour shift animates solid fill and stroke only, as `rgb()`. Gradients are not cloned in v1, so `core/parse` is unchanged.
 - 2026-10-14: Security review of the M5 contracts. Nothing critical, high or medium. Fixed: a stored spec could make compile build hundreds of megabytes (now duplicate targets are dropped, easings made once per effect, and effects past a 16 MB keyframe budget are left out with a note); the payload suite did not detonate the new output forms.
+- 2026-10-14: Parity is green on CI's Linux runner. The CSS shot opens the export's reduced-motion gate, and Chromium draws text greyscale. Both were runner effects, not export bugs. Unparks the WebKit item.
 - 2026-10-14: M6 started alongside the M5 effects. Raster frames skip the whole-file re-sanitise: checked once per export, each frame's style text-checked. Security review: nothing critical, high or medium; the per-frame input is now a branded type and a raster frame is detonated in the payload suite. No font embedding, because uploads keep no fonts.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

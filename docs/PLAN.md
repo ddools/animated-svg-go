@@ -154,9 +154,7 @@ Approved decisions:
 
 ## Parked
 
-| Item | Since | Notes |
-| --- | --- | --- |
-| WebKit parity fails on CI's Linux runner | M4 (PR #9) | Preview against CSS export at the first sample time, 0.08% to 5.6% of pixels. Passes to the pixel in WebKit on a Mac. Linux WebKit is a different port from Safari. Options when picked up: a macOS runner for parity (private repo, about 10x minutes), Chromium-only parity on Linux, or find the cause. Until then the `parity` check stays red and Der runs `pnpm parity` locally before merging |
+Nothing parked.
 
 ## Stage 7. Hardening and launch (M7)
 
