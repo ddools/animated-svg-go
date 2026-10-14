@@ -175,7 +175,12 @@ test.describe('hostile files stay inert once exported', () => {
       // With nothing to animate the export still runs: the XML serialise and HTML re-parse are what an mXSS payload targets.
       const key = out.ok ? out.svg.match(/data-k="(k[0-9a-f]{8})"/)?.[1] : undefined;
       const exported = await page.evaluate(
-        ([svg, ir]) => ({ svg: window.__asg!.exports.animatedSvg(svg, ir), js: window.__asg!.exports.jsSnippet(svg, ir) }),
+        ([svg, ir]) => {
+          const { animatedSvg, jsSnippet, checkedExport, withStyle, frameCss, scopeOf } = window.__asg!.exports;
+          const scope = scopeOf(svg, ir);
+          // A raster frame takes the cheap path: checked once, then only its style is checked.
+          return { svg: animatedSvg(svg, ir), js: jsSnippet(svg, ir), frame: withStyle(checkedExport(svg, scope), frameCss(ir, 0.5, scope)) };
+        },
         [out.ok ? out.svg : '', animation(key)] as const,
       );
       // The new output forms really are in what gets detonated.
@@ -189,6 +194,7 @@ test.describe('hostile files stay inert once exported', () => {
       for (const sink of SINKS) {
         expect(await detonate(context, exported.svg, sink), sink).toEqual({ dialogs: [], requests: [] });
       }
+      expect(await detonate(context, exported.frame, 'inline in HTML'), 'raster frame').toEqual({ dialogs: [], requests: [] });
       // The snippet's script is ours and runs. Nothing else may.
       expect(await detonate(context, exported.js, 'inline in HTML')).toEqual({ dialogs: [], requests: [] });
     });

@@ -3,6 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { IR } from '../../src/core/ir/types';
 import type { Effect, Spec } from '../../src/core/spec/schema';
+import { frameTimes } from '../../src/core/export/frames';
 import { compare, render } from '../helpers/render';
 
 const NS = 'xmlns="http://www.w3.org/2000/svg"';
@@ -14,6 +15,7 @@ const FIXTURE = `<svg ${NS} viewBox="0 0 400 300">
   </g></g></g>
   <path id="line" d="M20 250H380" stroke="black" stroke-width="6" stroke-linecap="round" fill="none"/>
   <circle id="dot" cx="300" cy="80" r="30" fill="orange"/>
+  <text id="words" x="230" y="140" font-family="Helvetica, Arial, sans-serif" font-size="24">Hello</text>
   <g id="pair">
     <path d="M40 200 L180 160" stroke="crimson" stroke-width="8" fill="none"/>
     <circle cx="250" cy="180" r="20" fill="none" stroke="navy" stroke-width="6" pathLength="10"/>
@@ -40,7 +42,8 @@ type Draft = {
 };
 const EASE_IN_OUT = { kind: 'cubic', p: [0.42, 0, 0.58, 1] } as const;
 
-const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
+// `tolerance` overrides TOLERANCE for preview against CSS export only.
+const SCENARIOS: { name: string; loop?: boolean; tolerance?: number; effects: Draft[] }[] = [
   { name: 'spin, eased, inside nested transforms', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 270 }, timing: { duration: 2 } }] },
   { name: 'spin about an off-centre pivot', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 100 }, timing: { duration: 2 }, pivot: { fx: 0, fy: 1 } }] },
   { name: 'wiggle about an off-centre pivot', effects: [{ type: 'wiggle', labels: ['nested'], params: { angle: 25, wiggles: 5, seed: 7 }, timing: { duration: 2 }, pivot: { fx: 0.2, fy: 0.8 } }] },
@@ -95,6 +98,9 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       { type: 'float', labels: ['nested'], params: { x: 12, y: -18 }, timing: { duration: 1, iterations: 2, direction: 'alternate' } },
     ],
   },
+  // Chromium antialiases live text a little differently from text in an SVG image: 0.09% measured, all on
+  // the glyphs, none from position. The raster path still matches the sampler at TOLERANCE.
+  { name: 'spin some text', tolerance: 0.002, effects: [{ type: 'spin', labels: ['words'], params: { degrees: 60 }, timing: { duration: 2 } }] },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
 
@@ -143,7 +149,7 @@ async function preview(page: Page, t: number): Promise<Buffer> {
   return page.locator('iframe').screenshot({ style: '[data-testid=canvas] .relative > div { display: none !important; }' });
 }
 
-for (const { name, loop = true, effects } of SCENARIOS) {
+for (const { name, loop = true, tolerance = TOLERANCE, effects } of SCENARIOS) {
   test(name, async ({ page, context }, testInfo) => {
     await openEditor(page);
     const { svg, ir } = await load(page, loop, effects);
@@ -154,11 +160,12 @@ for (const { name, loop = true, effects } of SCENARIOS) {
     for (const t of TIMES) {
       // A paused animation with a negative delay shows that moment. Test only: injected after the export check.
       const paused = exported.replace('</style>', `*{animation-play-state:paused!important;animation-delay:${-t}s!important}</style>`);
+      // The raster path: the file checked once, each frame's style checked and spliced in.
       const frame = await page.evaluate(
         ([svg, ir, t]) => {
-          const { exportMarkup, frameCss, scopeOf } = window.__asg!.exports;
+          const { checkedExport, withStyle, frameCss, scopeOf } = window.__asg!.exports;
           const scope = scopeOf(svg, ir);
-          return exportMarkup(svg, scope, frameCss(ir, t, scope));
+          return withStyle(checkedExport(svg, scope), frameCss(ir, t, scope));
         },
         [svg, ir, t] as const,
       );
@@ -171,14 +178,62 @@ for (const { name, loop = true, effects } of SCENARIOS) {
         const result = compare(shots[a], shots[b]);
         const ratio = 'ratio' in result ? result.ratio : 1;
         testInfo.annotations.push({ type: `${a} vs ${b} at ${t}s`, description: `${(ratio * 100).toFixed(3)}%` });
-        if (ratio > TOLERANCE) {
+        const allowed = a === 'preview' ? tolerance : TOLERANCE;
+        if (ratio > allowed) {
           for (const [label, png] of Object.entries(shots)) await testInfo.attach(`${t}s-${label}.png`, { body: png, contentType: 'image/png' });
         }
-        expect(ratio, `${a} vs ${b} at ${t}s${'reason' in result ? `: ${result.reason}` : ''}`).toBeLessThanOrEqual(TOLERANCE);
+        expect(ratio, `${a} vs ${b} at ${t}s${'reason' in result ? `: ${result.reason}` : ''}`).toBeLessThanOrEqual(allowed);
       }
     }
   });
 }
+
+// Raster export (M6): the frame loop's canvas against the sampler frame in <img>. Not the preview: the
+// table above already ties the sampler to it. Three frames a second avoid the scenarios' jumps.
+const RASTER_FPS = 3;
+
+test.describe('raster frames', () => {
+  for (const { name, loop = true, effects } of SCENARIOS) {
+    test(name, async ({ page, context }, testInfo) => {
+      await openEditor(page);
+      const { svg, ir } = await load(page, loop, effects);
+      const canvases = await page.evaluate(
+        async ([svg, ir, box, fps]) => {
+          const out: string[] = [];
+          // The <img> renders are screenshots at the device pixel ratio, so the canvas is too.
+          const size = { width: box.width * devicePixelRatio, height: box.height * devicePixelRatio };
+          await window.__asg!.exports.renderFrames({ svg, ir, size, fps, background: '#fff' }, (canvas) => {
+            out.push(canvas.toDataURL('image/png'));
+          });
+          return out;
+        },
+        [svg, ir, BOX, RASTER_FPS] as const,
+      );
+      const times = frameTimes(ir.duration, RASTER_FPS, ir.iterations === 'infinite');
+      expect(canvases).toHaveLength(times.length);
+      for (const [i, t] of times.entries()) {
+        const frame = await page.evaluate(
+          ([svg, ir, t]) => {
+            const { checkedExport, withStyle, frameCss, scopeOf } = window.__asg!.exports;
+            const scope = scopeOf(svg, ir);
+            return withStyle(checkedExport(svg, scope), frameCss(ir, t, scope));
+          },
+          [svg, ir, t] as const,
+        );
+        const canvas = Buffer.from(canvases[i].split(',')[1], 'base64');
+        const sampler = (await render(context, frame, BOX)).png;
+        const result = compare(canvas, sampler);
+        const ratio = 'ratio' in result ? result.ratio : 1;
+        testInfo.annotations.push({ type: `canvas vs sampler at ${t.toFixed(3)}s`, description: `${(ratio * 100).toFixed(3)}%` });
+        if (ratio > TOLERANCE) {
+          await testInfo.attach(`${t.toFixed(3)}s-canvas.png`, { body: canvas, contentType: 'image/png' });
+          await testInfo.attach(`${t.toFixed(3)}s-sampler.png`, { body: sampler, contentType: 'image/png' });
+        }
+        expect(ratio, `canvas vs sampler at ${t.toFixed(3)}s${'reason' in result ? `: ${result.reason}` : ''}`).toBeLessThanOrEqual(TOLERANCE);
+      }
+    });
+  }
+});
 
 test('the harness notices a frame that is 50 ms out', async ({ page, context }) => {
   await openEditor(page);

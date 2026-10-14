@@ -241,13 +241,27 @@ Exports are made on demand when the user copies or downloads, not on every edit:
 
 `pnpm parity` (`tests/parity/`, Chromium and WebKit, also in CI). For eight scenarios at four fixed times, it renders three frames in one 512 × 384 box and pixel-diffs them: the editor's WAAPI preview after a seek; the animated SVG export in `<img>`, frozen at t by an injected `animation-play-state: paused; animation-delay: -t`; and the sampler's static frame in `<img>`. Times avoid jumps, run ends and half turns. It also checks that `prefers-reduced-motion` reaches an SVG in `<img>`, with a control.
 
+Since M6 it also draws every scenario through the frame loop at 3 fps and compares each canvas with the sampler frame in `<img>`. A `<text>` in the fixture checks installed fonts on every path. Chromium antialiases live text slightly differently from text in an image (0.06% to 0.09% measured, all on the glyphs), so the text scenario allows 0.2% for preview against export only. Raster frames match the sampler at the usual tolerance in both engines.
+
 Measured in M4, headless on an M-series Mac: every scenario passes in both engines. The worst diff was 0.002% of pixels (Chromium, preview against CSS export). WebKit and the sampler matched to the pixel. Tolerance is 0.05%; a control test shows a frame 50 ms out fails it by more than ten times.
 
 ### Raster frame loop
 
-For each frame t: the export with `frameCss(ir, t, scope)` as its style -> Blob URL -> `new Image()` -> `await img.decode()` -> `ctx.drawImage`. Yield between frames (`scheduler.yield()` or `setTimeout(0)`) so the UI stays responsive. Assume SVG decoding needs the main thread on Safari. Running the export check on every frame is too slow at the caps, so M6 needs a cheaper path for frames, which never leave the browser.
+`renderFrames` in `core/export/frames.ts`. The file goes through `checkedExport` (parse, scope, size, sanitise) once. For each frame t: `withStyle(checked, frameCss(ir, t, scope))`, which checks the style text and splices it in -> Blob URL -> `new Image()` -> `await img.decode()` -> background fill and `ctx.drawImage` on one reused canvas -> `onFrame`, which hands the canvas to the encoder before the next frame is drawn. Nothing is held between frames. `checkedExport` returns a branded `Checked` string, so `withStyle` can't be handed unchecked markup. Yield between frames (`scheduler.yield()`, else `setTimeout`). Main thread, because Safari decodes SVG images there. Cancel with an `AbortSignal`.
 
-Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`, or warn that text will fall back.
+Frame times: `frameTimes(duration, fps, loop)` spreads `round(duration × fps)` frames evenly over one pass. A loop leaves out its end (its start again); a timeline that plays once keeps it. Encoders time each frame at `duration / count`, not `1 / fps`.
+
+MP4 (`core/export/video.ts`): Mediabunny `CanvasSource` on the loop's canvas, H.264 at `QUALITY_HIGH`, MP4 with the index first (`fastStart: 'in-memory'`) into a `BufferTarget`. `source.add()` is awaited, so encoder backpressure holds the loop back. `canExportMp4(size)` needs even sides, `VideoEncoder`, and Mediabunny's `canEncodeVideo('avc')`.
+
+GIF (`core/export/gif.ts`): each frame read back with `getImageData`, quantised to its own 256-colour palette, written by gifenc. Delays are rounded from the running total in hundredths, so 30 fps alternates 30 and 40 ms and keeps time. Loops forever when the timeline loops; plays once otherwise. `estimateGif` encodes three frames spread over the pass and scales by the frame count.
+
+Measured headless on an M-series Mac, 200 shapes spinning and fading: a 5 s, 30 fps, 1920 × 1080 MP4 takes 3.7 s in Chromium and 7.1 s in WebKit (2.5 to 3.3 MB). A 5 s, 15 fps, 720 px GIF takes 2.7 to 3.0 s (2.5 MB), quantised on the main thread. The estimate came within 3% of the file; the bar is 25%.
+
+Export panel: GIF offers 480 and 720 px wide, MP4 480, 720 and 1080; heights follow the viewBox, rounded to even. 15, 24 or 30 fps. A background colour, white by default. The GIF estimate reruns 400 ms after the settings or the animation stop changing. Where `canExportMp4` says no, the panel says so and points to GIF. The encoders are dynamic imports, loaded when their format is picked. Timelines over `MAX_SECONDS` (10, a placeholder until measured) can't be exported as GIF or MP4.
+
+Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
+
+Measured in the M6 spike, headless on an M-series Mac, inside the editor page with the CSP live: a sampler frame drawn from a Blob URL `<img>` does not taint the canvas in Chromium or WebKit, even with an embedded `data:` PNG. A draw straight after `decode()` matches a draw 300 ms later, so `decode()` is ready to paint. Text and vectors on the canvas match the frame in `<img>` to the pixel in both engines. A 1920 × 1440 frame costs 7.4 ms in Chromium and 3.7 ms in WebKit before encoding, of which the export check is 1.1 to 1.4 ms on a small file.
 
 ## 6. Platform notes
 
@@ -256,6 +270,7 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 - **Strokes:** `getBBox()` excludes stroke width. Pad by half `stroke-width`.
 - **`pathLength`:** an authored `pathLength` rescales dash values. Draw uses it as the length instead of `getTotalLength()`, or the dash would be the wrong size.
 - **Half turns:** a centrally symmetric shape turned 180° has the same box. Tests that check a spin by its bounding box must avoid half-turn times.
+- **Embedded rasters on a canvas:** WebKit smooths an upscaled embedded `<image>` more softly when the SVG is drawn on a canvas than when it is shown in `<img>`. Measured on an 8 px checkerboard scaled about 25 times: 0.32% of pixels differ, all inside the image. `imageSmoothingQuality` makes no difference. Chromium matches. Raster parity fixtures avoid upscaled rasters.
 - **Unverified:** how `vector-effect: non-scaling-stroke` changes the units of dash values in each engine.
 - **Accessibility:** reduced-motion fallback in every SVG, CSS and JS export (GIF and MP4 can't have one); keep `<title>`; add `role="img"` and `aria-label`; layer tree is the keyboard alternative to canvas picking; editor autoplay pauses under reduced motion.
 - **Targets:** desktop Chrome, Firefox and Safari on Mac. Mobile is not a v1 target. If it becomes one, measure iOS Low Power Mode rAF throttling (~30 fps) and the iOS canvas area cap (~16.7 MP) on a real device first. Both figures are unverified.
@@ -273,8 +288,8 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 | zod | Spec validation | MIT |
 | immer | Undo/redo patches. Not used: undo keeps snapshots (decision log, 14 Oct) | MIT |
 | idb-keyval | Local project storage | Apache-2.0 |
-| mediabunny | MP4 via WebCodecs | MPL-2.0 |
-| gifenc | GIF encoding | MIT |
+| mediabunny (1.60.0, pinned) | MP4 via WebCodecs | MPL-2.0 |
+| gifenc (1.0.3, pinned; no types, declared in `src/env.d.ts`) | GIF encoding | MIT |
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
 | vitest, @playwright/test, pixelmatch, pngjs, @types/pngjs, @types/node | Testing | MIT / Apache-2.0 / ISC |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
@@ -328,4 +343,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Stagger is an optional setting on every effect, not an effect type. Each target is planned on its own, not phase-shifted with a negative delay.
 - 2026-10-14: Colour shift animates solid fill and stroke only, as `rgb()`. Gradients are not cloned in v1, so `core/parse` is unchanged.
 - 2026-10-14: Security review of the M5 contracts. Nothing critical, high or medium. Fixed: a stored spec could make compile build hundreds of megabytes (now duplicate targets are dropped, easings made once per effect, and effects past a 16 MB keyframe budget are left out with a note); the payload suite did not detonate the new output forms.
+- 2026-10-14: M6 started alongside the M5 effects. Raster frames skip the whole-file re-sanitise: checked once per export, each frame's style text-checked. Security review: nothing critical, high or medium; the per-frame input is now a branded type and a raster frame is detonated in the payload suite. No font embedding, because uploads keep no fonts.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

@@ -86,6 +86,8 @@ Done when: each effect has unit tests, a parity test, and a corpus smoke test.
 
 Lead: Opus 5.5 for the frame loop and memory strategy. Sonnet 5.5 for encoder wiring and UI.
 
+Started before M5 finished (Der, 14 Oct). It reads only the IR, so it never waited on the effects.
+
 - Frame loop with yielding, font embedding, progress and cancel.
 - MP4 via Mediabunny with capability detection. GIF via gifenc with size estimate.
 - Resolution and fps presets. Caps measured in Chrome and Mac Safari.
