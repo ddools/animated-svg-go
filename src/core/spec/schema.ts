@@ -8,6 +8,7 @@ import { slide, SlideParams } from './effects/slide';
 import { pop, PopParams } from './effects/pop';
 import { pulse, PulseParams } from './effects/pulse';
 import { spin, SpinParams } from './effects/spin';
+import { wiggle, WiggleParams } from './effects/wiggle';
 
 // No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
 z.config({ jitless: true });
@@ -58,6 +59,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('slide'), params: SlideParams }),
   z.object({ ...base, type: z.literal('pop'), params: PopParams }),
   z.object({ ...base, type: z.literal('pulse'), params: PulseParams }),
+  z.object({ ...base, type: z.literal('wiggle'), params: WiggleParams }),
 ]);
 
 export const SpecSchema = z.object({
@@ -105,7 +107,7 @@ export type EffectModule<T extends EffectType> = {
   compile(effect: Extract<Effect, { type: T }>, inventory: InventoryView): { tracks: LocalTrack[]; notes: LocalNote[] };
 };
 
-export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw, colour, slide, pop, pulse };
+export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw, colour, slide, pop, pulse, wiggle };
 
 export function newSpec(): Spec {
   return { version: 1, duration: 2, loop: true, effects: [] };

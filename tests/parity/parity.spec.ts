@@ -43,6 +43,7 @@ const EASE_IN_OUT = { kind: 'cubic', p: [0.42, 0, 0.58, 1] } as const;
 const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
   { name: 'spin, eased, inside nested transforms', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 270 }, timing: { duration: 2 } }] },
   { name: 'spin about an off-centre pivot', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 100 }, timing: { duration: 2 }, pivot: { fx: 0, fy: 1 } }] },
+  { name: 'wiggle about an off-centre pivot', effects: [{ type: 'wiggle', labels: ['nested'], params: { angle: 25, wiggles: 5, seed: 7 }, timing: { duration: 2 }, pivot: { fx: 0.2, fy: 0.8 } }] },
   { name: 'fade in late, then hold', effects: [{ type: 'fade', labels: ['dot'], params: { from: 0, to: 1 }, timing: { start: 0.5, duration: 1 } }] },
   { name: 'slide in from the left, fading up', effects: [{ type: 'slide', labels: ['dot'], params: { from: 'left', distance: 30, fade: 0 }, timing: { duration: 1.5 } }] },
   { name: 'pop with overshoot, about the centre', effects: [{ type: 'pop', labels: ['dot'], params: { from: 0.1 }, timing: { duration: 1.5 } }] },
