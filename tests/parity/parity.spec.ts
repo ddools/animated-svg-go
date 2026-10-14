@@ -45,6 +45,7 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
   { name: 'spin about an off-centre pivot', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 100 }, timing: { duration: 2 }, pivot: { fx: 0, fy: 1 } }] },
   { name: 'fade in late, then hold', effects: [{ type: 'fade', labels: ['dot'], params: { from: 0, to: 1 }, timing: { start: 0.5, duration: 1 } }] },
   { name: 'slide in from the left, fading up', effects: [{ type: 'slide', labels: ['dot'], params: { from: 'left', distance: 30, fade: 0 }, timing: { duration: 1.5 } }] },
+  { name: 'pop with overshoot, about the centre', effects: [{ type: 'pop', labels: ['dot'], params: { from: 0.1 }, timing: { duration: 1.5 } }] },
   { name: 'draw a line', effects: [{ type: 'draw', labels: ['line'], params: { from: 0, to: 100 }, timing: { duration: 1.5 } }] },
   { name: 'draw every stroke in a group', effects: [{ type: 'draw', labels: ['pair'], params: { from: 20, to: 90 }, timing: { duration: 2 } }] },
   {
