@@ -327,4 +327,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Spring easing is one setting, `bounce`, sampled to `linear()` stops that settle within the run.
 - 2026-10-14: Stagger is an optional setting on every effect, not an effect type. Each target is planned on its own, not phase-shifted with a negative delay.
 - 2026-10-14: Colour shift animates solid fill and stroke only, as `rgb()`. Gradients are not cloned in v1, so `core/parse` is unchanged.
+- 2026-10-14: Security review of the M5 contracts. Nothing critical, high or medium. Fixed: a stored spec could make compile build hundreds of megabytes (now duplicate targets are dropped, easings made once per effect, and effects past a 16 MB keyframe budget are left out with a note); the payload suite did not detonate the new output forms.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
