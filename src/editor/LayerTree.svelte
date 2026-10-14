@@ -59,7 +59,7 @@
     else if (top + ROW > list.scrollTop + viewport) list.scrollTop = top + ROW - viewport;
     scrollTop = list.scrollTop;
     await tick();
-    list.querySelector<HTMLElement>(`[data-index="${focused}"]`)?.focus();
+    list.querySelector<HTMLElement>(`[data-index="${focused}"]`)?.focus({ preventScroll: true });
   }
 
   function choose(key: string, additive: boolean) {
@@ -154,7 +154,7 @@
         tabindex={index === focused ? 0 : -1}
         onclick={(event) => {
           focused = index;
-          choose(key, event.shiftKey || event.metaKey || event.ctrlKey);
+          choose(key, event.shiftKey || event.metaKey);
         }}
         onmouseenter={() => (selection.hovered = key)}
         onmouseleave={() => (selection.hovered = null)}

@@ -15,10 +15,14 @@
   let overlay: SVGSVGElement;
   let lasso = $state<{ x0: number; y0: number; x: number; y: number } | null>(null);
 
+  // Null for a missing or collapsed element, so it never draws a 0x0 outline or lassos.
   function rectOf(key: string) {
-    const element = editor.sandbox?.elementFor(key);
-    return element ? element.getBoundingClientRect() : null;
+    const rect = editor.sandbox?.elementFor(key)?.getBoundingClientRect();
+    return rect && rect.width + rect.height > 0 ? rect : null;
   }
+
+  // Cmd and Shift add. Not Ctrl: on a Mac, Ctrl-click is a right-click.
+  const additive = (event: PointerEvent) => event.shiftKey || event.metaKey;
 
   // width and height are read so outlines follow the drawing when the canvas resizes.
   const hovered = $derived(width && height && selection.hovered ? rectOf(selection.hovered) : null);
@@ -39,7 +43,7 @@
     const { x, y } = point(event);
     const key = keyAt(x, y);
     if (key) {
-      if (event.shiftKey || event.metaKey || event.ctrlKey) selection.toggle(key);
+      if (additive(event)) selection.toggle(key);
       else selection.set([key]);
       return;
     }
@@ -57,19 +61,18 @@
     if (!lasso) return;
     const { x0, y0, x, y } = lasso;
     lasso = null;
-    const additive = event.shiftKey || event.metaKey || event.ctrlKey;
     if (Math.abs(x - x0) < DRAG && Math.abs(y - y0) < DRAG) {
-      if (!additive) selection.clear();
+      if (!additive(event)) selection.clear();
       return;
     }
     const [left, right, top, bottom] = [Math.min(x0, x), Math.max(x0, x), Math.min(y0, y), Math.max(y0, y)];
     const hits = leafNodes()
       .filter((node) => {
         const rect = rectOf(node.key);
-        return rect && rect.width + rect.height > 0 && rect.left < right && rect.right > left && rect.top < bottom && rect.bottom > top;
+        return rect && rect.left < right && rect.right > left && rect.top < bottom && rect.bottom > top;
       })
       .map((node) => node.key);
-    if (additive) selection.add(hits);
+    if (additive(event)) selection.add(hits);
     else selection.set(hits);
   }
 </script>
@@ -85,6 +88,8 @@
     onpointerdown={down}
     onpointermove={move}
     onpointerup={up}
+    onpointercancel={() => (lasso = null)}
+    onlostpointercapture={() => (lasso = null)}
     onpointerleave={() => (selection.hovered = null)}
   >
     {#each outlines as rect, i (i)}
