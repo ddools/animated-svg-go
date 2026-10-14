@@ -55,6 +55,8 @@ describe('css', () => {
     expect(() => css(ir([{ ...fade, target: 'k1"]{}' }]), 's1')).toThrow();
     expect(() => css(ir([{ ...fade, keyframes: [{ offset: 0, value: '1}</style>', easing: 'linear' }] }]), 's1')).toThrow();
     expect(() => css(ir([{ ...fade, keyframes: [{ offset: 0, value: 'url(x)', easing: 'linear' }] }]), 's1')).toThrow();
+    expect(() => css(ir([{ ...fade, property: 'opacity}body{display:none' as 'opacity' }]), 's1')).toThrow();
+    expect(() => css({ ...ir([fade]), duration: NaN }, 's1')).toThrow();
   });
 
   it('scopes each file and animation apart', () => {

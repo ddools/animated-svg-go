@@ -12,7 +12,10 @@ const ID_LIST_ATTRS = new Set(['aria-labelledby', 'aria-describedby']);
 // Matches up to and including the "#", so the prefix is inserted and nothing is re-tokenised.
 const LOCAL_URL_START = /url\(\s*['"]?#/gi;
 // Ours. Authored copies could spoof keys and wrappers, so they are removed before stamping.
-const RESERVED_ATTRS = ['data-k', 'data-anim', 'data-for'];
+const RESERVED_ATTRS = ['data-k', 'data-anim', 'data-for', 'data-asg'];
+// On the root these style the host page's box, not the drawing: pasted inline, a file could
+// cover the whole page. SVGO has already moved presentation styles and classes to attributes.
+const ROOT_BOX_ATTRS = ['style', 'class', 'overflow'];
 
 export type Warning = 'no-size';
 
@@ -117,6 +120,7 @@ export function rewrite(
   for (const element of elements) {
     for (const name of RESERVED_ATTRS) element.removeAttribute(name);
   }
+  for (const name of ROOT_BOX_ATTRS) root.removeAttribute(name);
   guaranteeViewBox(root, warnings);
   // Keys and labels are read before IDs are namespaced and before wrappers shift the tree.
   const stamped = stampKeys(elements.slice(1), root);
