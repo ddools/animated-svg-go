@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { compile, easingCss, planRuns } from '../../src/core/ir/compile';
+import { BUDGET, compile, easingCss, planRuns, springPoints, staggerOrder } from '../../src/core/ir/compile';
+import { ease } from '../../src/core/ir/evaluate';
 import type { InventoryView } from '../../src/core/ir/types';
 import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
-import { newEffect, newSpec, type Easing, type Effect, type Spec, type Timing } from '../../src/core/spec/schema';
+import { EFFECTS, newEffect, newSpec, SpecSchema, type Easing, type Effect, type Spec, type Timing } from '../../src/core/spec/schema';
 
 type Fake = Partial<InventoryNode> & Partial<Measured> & { key: string };
 
@@ -49,6 +50,28 @@ describe('easingCss', () => {
   it('mirrors for a reversed run, as CSS does', () => {
     expect(easingCss({ kind: 'cubic', p: [0.1, 0.2, 0.3, 0.4] }, true)).toBe('cubic-bezier(0.7, 0.6, 0.9, 0.8)');
     expect(easingCss({ kind: 'steps', n: 3, pos: 'start' }, true)).toBe('steps(3, end)');
+  });
+});
+
+describe('springs', () => {
+  it('run from 0 to 1 within the run, overshooting only when they bounce', () => {
+    for (const bounce of [0, 0.4, 0.9]) {
+      const points = springPoints(bounce);
+      expect(points[0]).toEqual([0, 0]);
+      expect(points.at(-1)).toEqual([1, 1]);
+      expect(points.every(([x], i) => i === 0 || x > points[i - 1][0])).toBe(true);
+      const peak = Math.max(...points.map(([, y]) => y));
+      if (bounce) expect(peak).toBeGreaterThan(1);
+      else expect(peak).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('write linear() stops, mirrored for a reversed run', () => {
+    const forward = easingCss({ kind: 'spring', bounce: 0.4 });
+    const reversed = easingCss({ kind: 'spring', bounce: 0.4 }, true);
+    expect(forward).toMatch(/^linear\(0 0%, .* 1 100%\)$/);
+    expect(reversed).toMatch(/^linear\(0 0%, .* 1 100%\)$/);
+    for (const p of [0.05, 0.2, 0.5, 0.9]) expect(ease(reversed, p)).toBeCloseTo(1 - ease(forward, 1 - p), 2);
   });
 });
 
@@ -157,6 +180,40 @@ describe('compile', () => {
     expect(swapped.notes).toEqual([{ effect: second.id, code: 'overlap', targets: ['a'] }]);
   });
 
+  it('stacks transforms, one track per effect in list order, with no overlap', () => {
+    const slow = effect('spin', ['a'], { start: 0, duration: 4 });
+    const fast = effect('spin', ['a'], { start: 1, duration: 1 }, { params: { degrees: 90 } });
+    const ir = compile(spec([slow, fast]), inventory({ key: 'a' }));
+    expect(ir.tracks.map((t) => [t.target, t.property, t.keyframes.at(-1)!.value])).toEqual([
+      ['a', 'transform', 'translate(5px, 5px) rotate(360deg) translate(-5px, -5px)'],
+      ['a', 'transform', 'translate(5px, 5px) rotate(90deg) translate(-5px, -5px)'],
+    ]);
+    expect(ir.notes).toEqual([]);
+  });
+
+  it('counts a target listed twice once', () => {
+    const ir = compile(spec([effect('fade', ['a', 'a'])]), inventory({ key: 'a' }));
+    expect(ir.tracks).toHaveLength(1);
+  });
+
+  it('leaves out what would not fit in a file, quickly, and says so', () => {
+    const keys = Array.from({ length: 2000 }, (_, i) => `k${i}`);
+    const hostile = effect('spin', keys, { duration: 0.05, iterations: 'infinite', easing: { kind: 'spring', bounce: 0.9 } });
+    const started = performance.now();
+    const ir = compile(spec([hostile], { duration: 60 }), inventory(...keys.map((key) => ({ key }))));
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(ir.notes.find((n) => n.code === 'too-big')?.targets.length).toBeGreaterThan(1900);
+    const size = ir.tracks.reduce((sum, t) => sum + t.keyframes.reduce((n, k) => n + k.value.length + k.easing.length, 0), 0);
+    expect(size).toBeLessThanOrEqual(BUDGET);
+  });
+
+  it('leaves room for an ordinary heavy animation', () => {
+    const keys = Array.from({ length: 200 }, (_, i) => `k${i}`);
+    const springs = effect('spin', keys, { duration: 1, easing: { kind: 'spring', bounce: 0.4 } });
+    const ir = compile(spec([springs], { duration: 2 }), inventory(...keys.map((key) => ({ key }))));
+    expect(ir.notes).toEqual([]);
+  });
+
   it('notes missing targets and refuses to move what has no wrapper', () => {
     const spin = effect('spin', ['gone', 'loose', 'ok']);
     const ir = compile(spec([spin]), inventory({ key: 'loose', wrapped: false }, { key: 'ok' }));
@@ -172,6 +229,52 @@ describe('compile', () => {
     const ir = compile(spec([late]), inventory({ key: 'a' }));
     expect(ir.tracks).toEqual([]);
     expect(ir.notes).toEqual([{ effect: late.id, code: 'outside', targets: ['a'] }]);
+  });
+});
+
+describe('effect modules', () => {
+  it('start new effects with their own timing, and refuse runs faster than their minimum', () => {
+    Object.assign(EFFECTS.fade, { timing: { direction: 'alternate', iterations: 'infinite' }, minDuration: 0.5 });
+    try {
+      const fade = newEffect('fade', ['a'], 'f');
+      expect(fade.timing).toMatchObject({ start: 0, duration: 1, direction: 'alternate', iterations: 'infinite' });
+      expect(SpecSchema.safeParse(spec([fade])).success).toBe(true);
+      expect(SpecSchema.safeParse(spec([{ ...fade, timing: { ...fade.timing, duration: 0.3 } }])).success).toBe(false);
+    } finally {
+      delete EFFECTS.fade.timing;
+      delete EFFECTS.fade.minDuration;
+    }
+  });
+});
+
+describe('stagger', () => {
+  const row = inventory(
+    { key: 'a', bbox: { x: 20, y: 0, width: 10, height: 10 } },
+    { key: 'b', bbox: { x: 0, y: 30, width: 10, height: 10 } },
+    { key: 'c', bbox: { x: 40, y: 10, width: 10, height: 10 } },
+  );
+  const by = (order: NonNullable<Effect['stagger']>['order'], seed = 1) => staggerOrder(['c', 'a', 'b'], { gap: 1, order, seed }, row);
+
+  it('orders by document, position or a seeded shuffle', () => {
+    expect(by('start')).toEqual(['a', 'b', 'c']);
+    expect(by('end')).toEqual(['c', 'b', 'a']);
+    expect(by('x')).toEqual(['b', 'a', 'c']);
+    expect(by('y')).toEqual(['a', 'c', 'b']);
+    expect(by('centre')[0]).toBe('a');
+    expect(by('random', 7)).toEqual(by('random', 7));
+    expect(new Set([1, 2, 3, 4, 5].map((seed) => by('random', seed).join()))).not.toHaveProperty('size', 1);
+  });
+
+  it('starts each target a gap after the one before, and notes those pushed past the end', () => {
+    const fade = effect('fade', ['a', 'b', 'c'], { start: 0.5, duration: 1 }, { stagger: { gap: 1.5, order: 'start', seed: 0 } });
+    const ir = compile(spec([fade]), row);
+    expect(ir.tracks.map((t) => [t.target, t.keyframes[1].offset])).toEqual([
+      ['a', 0.125],
+      ['b', 0.5],
+      ['c', 0.875],
+    ]);
+    // c starts at 3.5, so its run is squeezed into the last half second.
+    expect(ir.notes).toEqual([{ effect: fade.id, code: 'squeezed', targets: ['c'] }]);
   });
 });
 

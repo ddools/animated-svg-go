@@ -29,6 +29,13 @@ describe('css', () => {
     expect(css(ir([fade], 1), 's1')).toContain('linear 1 both');
   });
 
+  it('adds stacked transforms, and says nothing where nothing stacks', () => {
+    expect(css(ir([fade, spin, spin]), 's1')).toContain(
+      '{animation:s1-0 2s linear infinite both,s1-1 2s linear infinite both,s1-2 2s linear infinite both;animation-composition:replace,add,add}',
+    );
+    expect(css(ir([fade, dash]), 's1')).not.toContain('animation-composition');
+  });
+
   it('plays nothing under reduced motion', () => {
     const out = css(ir([fade]), 's1');
     const guard = out.indexOf('@media (prefers-reduced-motion:no-preference)');
@@ -51,6 +58,14 @@ describe('css', () => {
     expect(css(ir([jump]), 's1')).toContain('{0%{opacity:0}0.001%{opacity:1}49.999%{opacity:1}50%{opacity:0}100%{opacity:0}}');
   });
 
+  it('paints fill and stroke on the element, as rgb()', () => {
+    const fill: Track = { target: 'k2b', property: 'fill', keyframes: [{ offset: 0, value: 'rgb(255, 0, 0)', easing: 'linear' }, { offset: 1, value: 'rgb(0, 0, 255)', easing: 'linear' }] };
+    expect(css(ir([fill]), 's1')).toContain('@keyframes s1-0{0%{fill:rgb(255, 0, 0)}100%{fill:rgb(0, 0, 255)}}');
+    expect(selector('s1', { ...fill, property: 'stroke' })).toBe('[data-asg="s1"] [data-k="k2b"]');
+    expect(frameCss(ir([fill]), 1, 's1')).toBe('[data-asg="s1"] [data-k="k2b"]{fill:rgb(127.5, 0, 127.5) !important}');
+    expect(() => css(ir([{ ...fill, keyframes: [{ offset: 0, value: 'url(#g)', easing: 'linear' }] }]), 's1')).toThrow();
+  });
+
   it('refuses keys and values it did not generate', () => {
     expect(() => css(ir([{ ...fade, target: 'k1"]{}' }]), 's1')).toThrow();
     expect(() => css(ir([{ ...fade, keyframes: [{ offset: 0, value: '1}</style>', easing: 'linear' }] }]), 's1')).toThrow();
@@ -69,6 +84,13 @@ describe('frameCss', () => {
   it('writes the values at one moment as static rules on the same selectors', () => {
     expect(frameCss(ir([fade, dash]), 1, 's1')).toBe(
       '[data-asg="s1"] [data-for="k1a"]{opacity:0.5 !important}\n[data-asg="s1"] [data-k="k2b"]{stroke-dashoffset:20 !important}',
+    );
+  });
+
+  it('writes stacked transforms as one list, in track order', () => {
+    const half = 'translate(5px, 5px) rotate(45deg) translate(-5px, -5px)';
+    expect(frameCss(ir([{ ...spin, keyframes: spin.keyframes.map((k) => ({ ...k, easing: 'linear' })) }, spin]), 1, 's1')).toBe(
+      `[data-asg="s1"] [data-for="k1a"]{transform:${half} ${half} !important}`,
     );
   });
 });

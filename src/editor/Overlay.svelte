@@ -50,7 +50,7 @@
 
   const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
   const handles = $derived.by(() => {
-    if (!still || !active || !EFFECTS[active.type].transform) return [];
+    if (!still || !active || !EFFECTS[active.type].pivot) return [];
     const { fx, fy } = active.pivot ?? { fx: 0.5, fy: 0.5 };
     return active.targets.slice(0, MAX_HANDLES).flatMap((key) => {
       const space = pivotSpace(key);

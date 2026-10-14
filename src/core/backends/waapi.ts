@@ -1,6 +1,6 @@
 // The live preview: the IR played with element.animate() inside the sandbox. See docs/ARCHITECTURE.md section 3.
 // Uses the DOM only when called, never at import.
-import { WRAPPER_PROPERTIES, type IR, type Track } from '../ir/types';
+import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type IR, type Track } from '../ir/types';
 
 export type Preview = {
   /** Brings the running animations in line with the IR, keeping time and play state. */
@@ -47,7 +47,11 @@ export function createPreview(sandbox: Target): Preview {
 
       const seen = new Set<string>();
       for (const track of ir.tracks) {
-        const id = `${track.target}|${track.property}`;
+        // Stacked transforms share a target and property, so number them. Slots fill from 0, so
+        // creation order, which decides WAAPI's composite order, follows the IR's track order.
+        let n = 0;
+        while (seen.has(`${track.target}|${track.property}|${n}`)) n++;
+        const id = `${track.target}|${track.property}|${n}`;
         const property = camel(track.property);
         const keyframes = track.keyframes.map(({ offset, value, easing }) => ({ offset, easing, [property]: value }));
         const running = live.get(id);
@@ -58,7 +62,8 @@ export function createPreview(sandbox: Target): Preview {
         } else {
           const element = targetOf(sandbox, track);
           if (!element) continue;
-          const animation = element.animate(keyframes, timing);
+          const composite = ADDITIVE_PROPERTIES.has(track.property) ? 'add' : 'replace';
+          const animation = element.animate(keyframes, { ...timing, composite });
           animation.currentTime = now();
           if (clock.playState !== 'running') animation.pause();
           live.set(id, animation);

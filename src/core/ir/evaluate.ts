@@ -49,6 +49,20 @@ export function ease(css: string, p: number): number {
     const step = Math.floor(p * n) + (steps[2] === 'start' ? 1 : 0);
     return Math.min(Math.max(step, 0), n) / n;
   }
+  const stops = /^linear\(([^)]*)\)$/.exec(css);
+  if (stops) {
+    // CSS Easing 2 linear(), for the form compile writes: every stop "output input%", inputs non-decreasing.
+    const points = stops[1].split(',').map((stop) => {
+      const match = /^\s*(-?[\d.]+) (-?[\d.]+)%\s*$/.exec(stop);
+      if (!match) throw new Error(`Unsupported easing: ${css}`);
+      return [Number(match[2]) / 100, Number(match[1])];
+    });
+    // The last stop at or before p, so at a repeated input the later stop wins.
+    let i = 0;
+    while (i + 2 < points.length && points[i + 1][0] <= p) i++;
+    const [[x1, y1], [x2, y2]] = [points[i], points[i + 1]];
+    return x2 === x1 ? y2 : y1 + ((y2 - y1) * (p - x1)) / (x2 - x1);
+  }
   throw new Error(`Unsupported easing: ${css}`);
 }
 

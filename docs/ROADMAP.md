@@ -74,7 +74,8 @@ Measured: parity passes for Spin, Fade and Draw in eight scenarios in both engin
 
 Lead: Sonnet 5.5, one effect per subagent run. Haiku 5.5 for copy, docs and fixtures.
 
-- Remaining effects: Pop, Float, Wiggle, Pulse, Slide in, Colour shift, Stagger reveal.
+- Remaining effects: Pop, Float, Wiggle, Pulse, Slide in, Colour shift (solid colours). Stagger as a setting on any effect.
+- Contracts first (Opus): transforms stack, spring easing as `linear()`, stagger, fill and stroke tracks, select and colour controls.
 - Easing picker (presets, cubic-bezier editor, spring).
 - Timeline bars per effect. Shuffle button with stored seed.
 - Keyboard support across all controls. Editor autoplay respects reduced motion.
@@ -111,4 +112,6 @@ Done when: Der signs off on a pass through Chrome, Firefox and Safari on his Mac
 | Share links | Opus 5.5 | Vercel Blob, separate origin, server re-sanitise (ARCHITECTURE section 2, layer 3) |
 | Re-upload rebinding | Sonnet 5.5 | Needs the `data-k` geometry fingerprint (rounded bbox, path command count), which is not built yet |
 | Mobile and touch support | Sonnet 5.5 | Not a v1 target. Needs iOS canvas and memory limits measured on a real device first |
+| Gradient colour shift | Opus 5.5 | Clone a shared gradient per animated shape in rewrite, animate `stop-color`. Needs `security-reviewer` |
+| Draw "outline then fill" | Sonnet 5.5 | Draw the stroke, then fade in `fill-opacity` |
 | Lottie | Not planned | Revisit only with real demand, and only for a transform/opacity/trim-path subset |
