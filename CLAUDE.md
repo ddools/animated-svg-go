@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M2 part A built. Drop, pick or paste an SVG and it renders in the sandbox, with an inventory behind it. No layer tree, selection or animation yet. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M2 built. Drop, pick or paste an SVG; it renders in the sandbox with a layer tree, canvas picking, lasso, select-more-like-this tools and a file panel. No animation yet (M3). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -44,7 +44,7 @@ Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/workers/`, an
 ```
 src/
   pages/                    Astro pages (landing, editor, about)
-  editor/                   Svelte 5 island: App.svelte, sandbox.ts, state.svelte.ts, load.ts, pipeline.ts; panels and controls later
+  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, sandbox.ts, state and selection stores, load.ts, pipeline.ts
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
     parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts, inventory.ts
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
@@ -100,6 +100,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
 - Chromium logs a CSP violation as soon as it parses a `<style>` element or (without our `style-src-attr` allowance) a style attribute, even in an inert document. If CSP errors appear in the console, look for markup being parsed on the main thread.
 - The Svelte island hydrates after page load. In tests, wait for `window.__asg` before dispatching events the app listens for.
+- Big collections in editor state (inventory, selection keys) are held in `$state.raw` and replaced, never mutated. Deep reactivity over 20,000 nodes is slower than the pipeline. The `svelte/prefer-svelte-reactivity` lint rule is off for this reason.
 - A `dist/` built by the test suite contains the `window.__asg` test hook. Never deploy a prebuilt `dist/`. Vercel builds its own from source.
 - `pnpm test:e2e` builds the site and serves it on port 4399, so the CSP is live. The dev server does not apply the CSP.
 - Astro 7 puts `astro dev` and `astro preview` in the background when an AI agent runs them. Pass `--ignore-lock` for a foreground server, and stop any server you start.
