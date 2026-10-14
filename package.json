@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "corpus": "rm -rf tests/corpus/report && (playwright test -c playwright.corpus.config.ts || true) && node tests/corpus/summarise.mjs",
-    "parity": "echo 'pnpm parity arrives in M4' ",
+    "parity": "playwright test -c playwright.parity.config.ts",
     "lint": "eslint . && svelte-check && tsc --noEmit"
   },
   "devDependencies": {
