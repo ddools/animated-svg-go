@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M4 built. Select shapes, add Spin, Fade or Draw, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Copy or download an animated SVG, an SVG + CSS snippet or an SVG + JS snippet. `pnpm parity` proves preview, export and sampler agree. The last file and its effects autosave. No GIF or MP4 yet (M6). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M5 done, M6 built and awaiting Der's Safari checks. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 caps are placeholders until measured. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -39,7 +39,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/core/export/` (frames, gif, video), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
@@ -50,7 +50,7 @@ src/
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
     ir/                     types.ts, format.ts, compile.ts, evaluate.ts (sampler maths, M4)
     backends/               waapi.ts, css.ts, snippet.ts, sampler.ts
-    export/                 gif.ts, video.ts
+    export/                 frames.ts (raster frame loop), gif.ts, video.ts
   workers/                  pipeline.worker.ts (the SVGO pass only. Sanitise and rewrite need a DOM, so they run on the main thread)
 tests/
   unit/                     Vitest

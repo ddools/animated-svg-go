@@ -257,6 +257,8 @@ GIF (`core/export/gif.ts`): each frame read back with `getImageData`, quantised 
 
 Measured headless on an M-series Mac, 200 shapes spinning and fading: a 5 s, 30 fps, 1920 × 1080 MP4 takes 3.7 s in Chromium and 7.1 s in WebKit (2.5 to 3.3 MB). A 5 s, 15 fps, 720 px GIF takes 2.7 to 3.0 s (2.5 MB), quantised on the main thread. The estimate came within 3% of the file; the bar is 25%.
 
+Export panel: GIF offers 480 and 720 px wide, MP4 480, 720 and 1080; heights follow the viewBox, rounded to even. 15, 24 or 30 fps. A background colour, white by default. The GIF estimate reruns 400 ms after the settings or the animation stop changing. Where `canExportMp4` says no, the panel says so and points to GIF. The encoders are dynamic imports, loaded when their format is picked. Timelines over `MAX_SECONDS` (10, a placeholder until measured) can't be exported as GIF or MP4.
+
 Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
 
 Measured in the M6 spike, headless on an M-series Mac, inside the editor page with the CSP live: a sampler frame drawn from a Blob URL `<img>` does not taint the canvas in Chromium or WebKit, even with an embedded `data:` PNG. A draw straight after `decode()` matches a draw 300 ms later, so `decode()` is ready to paint. Text and vectors on the canvas match the frame in `<img>` to the pixel in both engines. A 1920 × 1440 frame costs 7.4 ms in Chromium and 3.7 ms in WebKit before encoding, of which the export check is 1.1 to 1.4 ms on a small file.
