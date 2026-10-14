@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { EFFECTS } from '../core/spec/schema';
+  import { playback } from './playback.svelte';
+  import { project } from './project.svelte';
   import { leafNodes, selection } from './selection.svelte';
   import { editor } from './state.svelte';
 
@@ -9,6 +12,8 @@
   const MAX_OUTLINES = 2000;
   // Below this a press on empty space is a click (clear), above it a lasso.
   const DRAG = 4;
+  // Pivot handles drawn for one effect.
+  const MAX_HANDLES = 50;
 
   let width = $state(0);
   let height = $state(0);
@@ -24,11 +29,61 @@
   // Cmd and Shift add. Not Ctrl: on a Mac, Ctrl-click is a right-click.
   const additive = (event: PointerEvent) => event.shiftKey || event.metaKey;
 
-  // width and height are read so outlines follow the drawing when the canvas resizes.
-  const hovered = $derived(width && height && selection.hovered ? rectOf(selection.hovered) : null);
-  const outlines = $derived(
-    width && height ? [...selection.keys].slice(0, MAX_OUTLINES).map(rectOf).filter((rect) => rect !== null) : [],
-  );
+  // width, height and the playhead are read so outlines follow the drawing when it resizes or moves.
+  // While playing they would lag behind, so they hide.
+  const still = $derived(width && height && !playback.playing && playback.time >= 0);
+  const hovered = $derived(still && selection.hovered ? rectOf(selection.hovered) : null);
+  const outlines = $derived(still ? [...selection.keys].slice(0, MAX_OUTLINES).map(rectOf).filter((rect) => rect !== null) : []);
+
+  type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
+  const through = (m: Matrix, x: number, y: number) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f });
+
+  /** Where a target's pivot is drawn, and how to map the pointer back into its box. */
+  function pivotSpace(key: string) {
+    const wrapper = editor.sandbox?.elementFor(key)?.parentElement;
+    const space = wrapper?.parentElement as unknown as SVGGraphicsElement | null;
+    const box = editor.inventory?.measure(key)?.bbox;
+    // The wrapper's parent: the pivot is fixed there whatever the animation is doing.
+    const matrix = space?.getScreenCTM?.();
+    return matrix && box ? { matrix, box } : null;
+  }
+
+  const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
+  const handles = $derived.by(() => {
+    if (!still || !active || !EFFECTS[active.type].transform) return [];
+    const { fx, fy } = active.pivot ?? { fx: 0.5, fy: 0.5 };
+    return active.targets.slice(0, MAX_HANDLES).flatMap((key) => {
+      const space = pivotSpace(key);
+      if (!space) return [];
+      const { box, matrix } = space;
+      return [{ key, ...through(matrix, box.x + fx * box.width, box.y + fy * box.height) }];
+    });
+  });
+
+  let pivoting: string | null = null;
+
+  function grabPivot(event: PointerEvent, key: string) {
+    event.stopPropagation();
+    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    pivoting = key;
+  }
+
+  function movePivot(event: PointerEvent) {
+    const space = pivoting && pivotSpace(pivoting);
+    if (!space) return;
+    const { x, y } = point(event);
+    const local = through(space.matrix.inverse(), x, y);
+    const { box } = space;
+    const fraction = (value: number, start: number, size: number) => (size ? Math.min(1, Math.max(0, (value - start) / size)) : 0.5);
+    const pivot = { fx: fraction(local.x, box.x, box.width), fy: fraction(local.y, box.y, box.height) };
+    const id = project.active;
+    project.drag((spec) => void (spec.effects.find((effect) => effect.id === id)!.pivot = pivot));
+  }
+
+  function dropPivot() {
+    pivoting = null;
+    project.settle();
+  }
 
   function point(event: PointerEvent) {
     const box = overlay.getBoundingClientRect();
@@ -109,5 +164,21 @@
         stroke-dasharray="4 3"
       />
     {/if}
+    <!-- Mouse only. The pivot sliders in the effect panel are the keyboard route. -->
+    {#each handles as handle (handle.key)}
+      <circle
+        role="presentation"
+        data-testid="pivot"
+        cx={handle.x}
+        cy={handle.y}
+        r="6"
+        class="fill-base-100 stroke-secondary cursor-move"
+        stroke-width="2"
+        onpointerdown={(event) => grabPivot(event, handle.key)}
+        onpointermove={movePivot}
+        onpointerup={dropPivot}
+        onlostpointercapture={dropPivot}
+      />
+    {/each}
   </svg>
 </div>
