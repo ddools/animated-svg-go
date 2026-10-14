@@ -29,6 +29,8 @@
       // Puts markup in the sandbox without sanitising it, to test the sandbox on its own.
       mountRaw: (svg) => mount(document.querySelector('iframe')!, svg),
       exports: { ...cssBackend, ...snippet, ...sampler, ...frames },
+      // Loaded on demand, as the export panel loads them.
+      encoders: async () => ({ ...(await import('../core/export/video')), ...(await import('../core/export/gif')) }),
     };
   }
 
