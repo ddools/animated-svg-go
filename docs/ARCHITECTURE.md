@@ -47,6 +47,8 @@ Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s 
    - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, `getTotalLength()` for shapes, computed fill, stroke and stroke width, `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
    - Still to add when an effect needs them: closed path, `vector-effect`, heavy filter, `preserveAspectRatio="none"`, text that needs a font.
 
+On top of the inventory, the editor's selection tools (same type, same fill, same stroke, siblings, parent) and the lasso work on visible nodes only. On the world map below they take 60 to 350 ms.
+
 Measured on the largest real corpus file (3.8 MB world map, 5,444 elements), from choosing the file to seeing it: 1.7 s in Chromium, 1.15 s in WebKit, headless on an M-series Mac with nothing else running.
 
 Animatable types: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `text`, `image`, `use`, `g`. Exclude descendants of `defs`, `symbol`, `clipPath`, `mask`, `pattern`, `marker` from the default tree (show them in an advanced view).
@@ -251,4 +253,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Inventory geometry is measured lazily. The `data-k` geometry fingerprint moves to "Later" with re-upload rebinding.
 - 2026-10-13: Picking uses an overlay in the parent and `elementFromPoint()`, with no listeners inside the sandbox.
 - 2026-10-13: Security review of M2 part A. Nothing critical or high. Fixed: sandbox tests could pass without the sandbox (now has a no-CSP control), `mount()` accepted non-SVG elements, the sandbox CSP was installed after the import and lacked `base-uri` and `form-action`, `measure()` could throw in Firefox. Links become groups in the sandbox.
+- 2026-10-14: The layer tree renders only the rows in view (fixed row height, no dependency). Content inside `defs`, `clipPath`, `mask`, `pattern`, `marker` and `symbol` is left out of the tree and the canvas tools.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

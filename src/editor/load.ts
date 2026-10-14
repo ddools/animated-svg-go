@@ -1,6 +1,7 @@
 import { LIMITS, PipelineError } from '../core/parse';
 import type { PipelineErrorCode } from '../core/parse/limits';
 import { normaliseFile } from './pipeline';
+import { selection } from './selection.svelte';
 import { editor } from './state.svelte';
 
 const MESSAGES: Record<PipelineErrorCode, string> = {
@@ -24,6 +25,7 @@ export async function loadText(text: string, name = 'Pasted SVG'): Promise<void>
     const result = await normaliseFile(text);
     editor.sandbox = undefined;
     editor.inventory = undefined;
+    selection.clear();
     editor.result = result;
     editor.status = 'ready';
   } catch (error) {

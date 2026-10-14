@@ -41,6 +41,8 @@ Lead: Opus 5.5 (the main session). `security-reviewer` on the sandbox. Delivered
 
 Done when: a 5 MB corpus file loads in under 2 s on a recent Mac and stays interactive in Chrome, Firefox and Safari.
 
+Measured: the largest corpus file (3.8 MB) loads in 1.7 s in Chromium and 1.15 s in WebKit, headless. Selection tools on it take under 0.4 s.
+
 ## M3. Spec, IR and WAAPI preview (risk 2)
 
 Lead: Opus 5.5 designs spec, IR, Spin and Draw (one wrapper effect, one element effect). Sonnet 5.5 implements Fade from that pattern.
