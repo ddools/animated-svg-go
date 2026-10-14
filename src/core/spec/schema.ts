@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import type { InventoryView, LocalNote, LocalTrack } from '../ir/types';
 import { draw, DrawParams } from './effects/draw';
+import { fade, FadeParams } from './effects/fade';
 import { spin, SpinParams } from './effects/spin';
 
 const unit = z.number().min(0).max(1);
@@ -33,6 +34,7 @@ const base = {
 
 export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('spin'), params: SpinParams }),
+  z.object({ ...base, type: z.literal('fade'), params: FadeParams }),
   z.object({ ...base, type: z.literal('draw'), params: DrawParams }),
 ]);
 
@@ -64,7 +66,7 @@ export type EffectModule<T extends EffectType> = {
   compile(effect: Extract<Effect, { type: T }>, inventory: InventoryView): { tracks: LocalTrack[]; notes: LocalNote[] };
 };
 
-export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, draw };
+export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw };
 
 export function newSpec(): Spec {
   return { version: 1, duration: 2, loop: true, effects: [] };

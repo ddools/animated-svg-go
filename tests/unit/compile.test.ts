@@ -195,6 +195,25 @@ describe('spin', () => {
   });
 });
 
+describe('fade', () => {
+  it('runs opacity from 0 to 1 by default', () => {
+    const ir = compile(spec([effect('fade', ['a'], { duration: 4 })]), inventory({ key: 'a' }));
+    expect(ir.tracks).toHaveLength(1);
+    expect(ir.tracks[0]).toMatchObject({ target: 'a', property: 'opacity' });
+    expect(frames(ir.tracks[0])).toEqual([
+      [0, '0'],
+      [1, '1'],
+    ]);
+  });
+
+  it('drops an unwrapped target, as opacity lives on the wrapper', () => {
+    const fade = effect('fade', ['loose']);
+    const ir = compile(spec([fade]), inventory({ key: 'loose', wrapped: false }));
+    expect(ir.tracks).toEqual([]);
+    expect(ir.notes).toEqual([{ effect: fade.id, code: 'unwrapped', targets: ['loose'] }]);
+  });
+});
+
 describe('draw', () => {
   it('holds a dash pattern with a gap twice the length', () => {
     const ir = compile(spec([effect('draw', ['a'])]), inventory({ key: 'a', length: 12.3456 }));
