@@ -112,12 +112,15 @@ Done. Merged in PR #7.
 
 ## Stage 5. Effects catalogue and controls (M5)
 
+Plan approved 14 Oct. Contracts merged in PR #10. Decided with Der: Colour shift is solid colours only (gradient cloning moves to ROADMAP Later), and Stagger is a setting on any effect, not an effect type.
+
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
+| 0 | Contracts: stacked transforms, spring to `linear()`, stagger, fill and stroke tracks, select and colour controls | Opus | `security-reviewer` | ✓ PR #10. Nothing critical, high or medium; two lows fixed (a compile budget, payload coverage) |
 | 1 | Pop, Float, Wiggle, Pulse, Slide in. One run each, in parallel worktrees | `effect-builder` | Opus reviews each diff |  |
-| 2 | Colour shift, including gradient cloning on first edit | Opus | |  |
-| 3 | Stagger reveal. Shared keyframes, per-element delay | Opus | |  |
-| 4 | Easing picker: presets, cubic-bezier editor, spring to `linear()` | Sonnet | Opus reviews the spring sampler |  |
+| 2 | Colour shift, solid colours. Gradient and pattern paint gets a note | Opus | | Partly. Fill and stroke tracks and their export check are in PR #10; the effect is not built |
+| 3 | Stagger, as a setting on any effect. Each target planned on its own | Opus | | Partly. Built in compile in PR #10, with parity; no panel controls yet |
+| 4 | Easing picker: presets, cubic-bezier editor, spring to `linear()` | Sonnet | Opus reviews the spring sampler | Partly. Opus built the spring sampler and `linear()` evaluation in PR #10, with parity; the picker UI is not built |
 | 5 | Timeline bars, shuffle with stored seed | Sonnet | |  |
 | 6 | Keyboard support. Autoplay respects reduced motion | Sonnet | |  |
 | 7 | Fixtures, effect copy, docs | Haiku | |  |
