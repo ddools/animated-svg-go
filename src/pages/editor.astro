@@ -11,6 +11,27 @@ import App from '../editor/App.svelte';
     <title>Editor | Animated SVG GO</title>
   </head>
   <body>
-    <App client:only="svelte" />
+    <App client:only="svelte">
+      <div slot="fallback" class="grid h-screen place-items-center p-6 text-center">
+        <p data-boot role="status">Loading the editor…</p>
+        <noscript><p>The editor needs JavaScript. Turn it on and reload.</p></noscript>
+      </div>
+    </App>
   </body>
 </html>
+
+<script>
+  // Runs before the editor does, and even if it fails to. Without it, a file dropped
+  // on the page opens in a new tab.
+  addEventListener('dragover', (event) => event.preventDefault());
+  addEventListener('drop', (event) => event.preventDefault());
+
+  // Turn a failed start into a message, not a blank page.
+  addEventListener('astro:hydration-error', (event) => {
+    const { error } = (event as CustomEvent<{ error: unknown }>).detail;
+    const status = document.querySelector('[data-boot]');
+    if (!status) return;
+    status.setAttribute('role', 'alert');
+    status.textContent = `The editor failed to start. Try reloading. If it keeps happening, this is the error: ${String(error)}`;
+  });
+</script>
