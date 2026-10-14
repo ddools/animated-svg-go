@@ -1,5 +1,5 @@
 // The pattern for paint and dash effects: they style the element itself, whose own attributes beat the wrapper's.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { InventoryView, LocalNote, LocalTrack } from '../../ir/types';
 import type { EffectModule } from '../schema';

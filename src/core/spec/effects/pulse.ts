@@ -1,5 +1,5 @@
 // One pulse per run: grow about a pivot to a peak and back, optionally dimming at the peak.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { LocalTrack } from '../../ir/types';
 import type { EffectModule } from '../schema';

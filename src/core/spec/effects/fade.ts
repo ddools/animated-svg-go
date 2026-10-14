@@ -1,5 +1,5 @@
 // Opacity is a wrapper property like transform (invariant 3), but it has no pivot to bake.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { EffectModule } from '../schema';
 

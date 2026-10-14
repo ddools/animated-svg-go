@@ -1,5 +1,5 @@
 // Paint is styled on the element itself, like Draw. Runs from each shape's own colour in the file to one chosen colour.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { LocalNote, LocalTrack } from '../../ir/types';
 import type { EffectModule } from '../schema';

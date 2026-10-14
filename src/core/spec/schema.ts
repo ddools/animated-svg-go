@@ -1,5 +1,5 @@
 // The spec is the only state (invariant 5). See docs/ARCHITECTURE.md section 3.
-import { z } from 'zod';
+import { z } from './zod';
 import type { InventoryView, LocalNote, LocalTrack } from '../ir/types';
 import { colour, ColourParams } from './effects/colour';
 import { draw, DrawParams } from './effects/draw';
@@ -10,12 +10,6 @@ import { pulse, PulseParams } from './effects/pulse';
 import { float, FloatParams } from './effects/float';
 import { spin, SpinParams } from './effects/spin';
 import { wiggle, WiggleParams } from './effects/wiggle';
-
-// No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
-z.config({ jitless: true });
-
-// No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
-z.config({ jitless: true });
 
 const unit = z.number().min(0).max(1);
 const key = z.string().min(1).max(64);
