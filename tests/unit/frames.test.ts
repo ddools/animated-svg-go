@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frameTimes } from '../../src/core/export/frames';
+import { frameTimes, rasterSize } from '../../src/core/export/frames';
 
 describe('frameTimes', () => {
   it('leaves out the end of a loop, which is its start again', () => {
@@ -24,5 +24,16 @@ describe('frameTimes', () => {
     for (const [d, f] of [[0, 30], [1, 0], [Number.NaN, 30], [1, Number.POSITIVE_INFINITY]]) {
       expect(() => frameTimes(d, f, true)).toThrow();
     }
+  });
+});
+
+describe('rasterSize', () => {
+  it('keeps the shape and makes both sides even', () => {
+    expect(rasterSize({ width: 400, height: 225 }, 720)).toEqual({ width: 720, height: 406 });
+    expect(rasterSize({ width: 200, height: 100 }, 1080)).toEqual({ width: 1080, height: 540 });
+  });
+
+  it('never goes below two pixels', () => {
+    expect(rasterSize({ width: 1000, height: 1 }, 480)).toEqual({ width: 480, height: 2 });
   });
 });

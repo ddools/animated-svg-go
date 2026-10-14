@@ -73,3 +73,73 @@ test('copies to the clipboard', async ({ page, context, browserName }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('@keyframes');
 });
+
+async function downloadedBytes(page: Page, format: string) {
+  await page.getByLabel('Format').selectOption({ label: format });
+  await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+  const [file] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download' }).click()]);
+  return { name: file.suggestedFilename(), bytes: await readFile(await file.path()) };
+}
+
+/** Sets the timeline's length, so the export has more frames to work through. */
+async function lengthen(page: Page, seconds: number) {
+  await page.evaluate((s) => window.__asg!.project.edit((spec) => Object.assign(spec, { duration: s })), seconds);
+  await page.waitForFunction((s) => window.__asg!.playback.ir?.duration === s, seconds);
+}
+
+test('downloads a GIF and an MP4, with a size estimate for the GIF', async ({ page }) => {
+  await open(page);
+  await spinBox(page);
+
+  await page.getByLabel('Format').selectOption({ label: 'GIF' });
+  await expect(page.getByTestId('raster-summary')).toHaveText(/^720 × 360 px\. About [\d.]+ KB\.$/);
+  const gif = await downloadedBytes(page, 'GIF');
+  expect(gif.name).toBe('logo-animated.gif');
+  expect(gif.bytes.subarray(0, 6).toString('latin1')).toBe('GIF89a');
+  await expect(page.getByRole('status').filter({ hasText: 'Downloaded' })).toBeVisible();
+
+  await page.getByLabel('Format').selectOption({ label: 'MP4 video' });
+  await page.getByLabel('Width').selectOption({ label: '1080 px' });
+  await expect(page.getByTestId('raster-summary')).toHaveText('1080 × 540 px.');
+  const mp4 = await downloadedBytes(page, 'MP4 video');
+  expect(mp4.name).toBe('logo-animated.mp4');
+  expect(mp4.bytes.subarray(4, 8).toString('latin1')).toBe('ftyp');
+});
+
+test('GIF stops at 720 px wide', async ({ page }) => {
+  await open(page);
+  await spinBox(page);
+  await page.getByLabel('Format').selectOption({ label: 'MP4 video' });
+  await page.getByLabel('Width').selectOption({ label: '1080 px' });
+  await page.getByLabel('Format').selectOption({ label: 'GIF' });
+  await expect(page.getByLabel('Width')).toHaveValue('720');
+  await expect(page.getByLabel('Width').locator('option')).toHaveText(['480 px', '720 px']);
+});
+
+test('cancel stops a GIF part way and saves nothing', async ({ page }) => {
+  await open(page);
+  await spinBox(page);
+  await lengthen(page, 8);
+  await page.getByLabel('Format').selectOption({ label: 'GIF' });
+  await page.getByLabel('Frame rate').selectOption({ label: '30 fps' });
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await page.getByRole('button', { name: 'Download' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Export progress' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Cancelled.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+  expect(downloads).toBe(0);
+});
+
+test('GIF and MP4 wait for a timeline of ten seconds or less', async ({ page }) => {
+  await open(page);
+  await spinBox(page);
+  await lengthen(page, 12);
+  await page.getByLabel('Format').selectOption({ label: 'GIF' });
+  await expect(page.getByRole('button', { name: 'Download' })).toBeDisabled();
+  await expect(page.getByRole('status').filter({ hasText: 'GIF and MP4 take up to 10 seconds.' })).toBeVisible();
+  // The text formats have no such limit.
+  await page.getByLabel('Format').selectOption({ label: 'Animated SVG' });
+  await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+});

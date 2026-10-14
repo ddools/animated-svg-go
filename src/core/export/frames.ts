@@ -29,6 +29,15 @@ export function frameTimes(duration: number, fps: number, loop: boolean): number
   return loop ? times : [...times, duration];
 }
 
+// ponytail: a placeholder until Der measures Chrome and Safari (PLAN Stage 6 item 7). 10 s at 30 fps is 300 frames.
+export const MAX_SECONDS = 10;
+
+/** Pixel size for a drawing `width` wide, keeping the viewBox's shape. Both sides even, which H.264 needs. */
+export function rasterSize(viewBox: Size, width: number): Size {
+  const even = (n: number) => Math.max(2, 2 * Math.round(n / 2));
+  return { width: even(width), height: even((width * viewBox.height) / viewBox.width) };
+}
+
 /** Seconds between frames: one pass spread evenly, so not always exactly 1 / fps. */
 export const frameStep = (duration: number, fps: number): number => duration / Math.max(1, Math.round(duration * fps));
 
