@@ -32,7 +32,8 @@ export type NoteCode =
   | 'dashed' // its own dashes are replaced while it draws
   | 'overlap' // a later effect animates the same thing at the same time, and wins. Never for transforms, which stack
   | 'squeezed' // did not fit before the end of the timeline, so it was shortened
-  | 'outside'; // starts after the timeline ends
+  | 'outside' // starts after the timeline ends
+  | 'too-big'; // more keyframes than one file can carry, so it is left out
 
 export type Note = { effect: string; code: NoteCode; targets: string[] };
 

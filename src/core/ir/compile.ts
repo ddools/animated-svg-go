@@ -11,6 +11,12 @@ import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type InventoryView, type IR, t
 // Floating point slack when fitting runs into the timeline, in seconds.
 const EPSILON = 1e-9;
 
+// Roughly the bytes of keyframes one IR may hold. Specs come from storage, so a hostile one could
+// otherwise ask for hundreds of megabytes (tiny runs, springs, thousands of targets). Effects past it
+// are skipped with a note. A 200-shape spin with a spring over a 2 s loop uses 0.6% of it.
+// ponytail: one global figure; per-file caps arrive with the M7 performance work.
+export const BUDGET = 16_000_000;
+
 type Run = { start: number; end: number; reversed: boolean };
 
 /** A keyframe at an absolute time. */
@@ -75,10 +81,13 @@ export function planRuns({ start, duration, iterations, direction }: Timing, tot
   return { runs, code };
 }
 
-function place(track: LocalTrack, runs: Run[], easing: Easing): Timed[] {
+/** Easing CSS forwards and mirrored, made once per effect: a spring's stops are costly. */
+type Easings = { forward: string; reversed: string };
+
+function place(track: LocalTrack, runs: Run[], easings: Easings): Timed[] {
   return runs.flatMap(({ start, end, reversed }) => {
     const frames = reversed ? track.keyframes.map(({ offset, value }) => ({ offset: 1 - offset, value })).reverse() : track.keyframes;
-    const css = easingCss(easing, reversed);
+    const css = reversed ? easings.reversed : easings.forward;
     return frames.map(({ offset, value }, i) => ({
       // Exact at the ends, so a run's end and the next run's start share an offset.
       time: offset === 1 ? end : start + offset * (end - start),
@@ -156,13 +165,16 @@ export function compile(spec: Spec, inventory: InventoryView): IR {
   };
 
   const groups = new Map<string, { target: string; property: Track['property']; windows: Window[] }>();
+  let spent = 0;
 
   spec.effects.forEach((effect, order) => {
-    const targets = effect.targets.filter((key) => inventory.nodes.has(key));
+    const targets = [...new Set(effect.targets)].filter((key) => inventory.nodes.has(key));
     for (const key of effect.targets) if (!inventory.nodes.has(key)) note(effect.id, 'missing', key);
     if (!targets.length) return;
 
     const module = EFFECTS[effect.type] as EffectModule<EffectType>;
+    const easings = { forward: easingCss(effect.timing.easing), reversed: easingCss(effect.timing.easing, true) };
+    const longest = Math.max(easings.forward.length, easings.reversed.length);
     // A stagger gives each target its own start, so each is planned and compiled on its own.
     const { stagger } = effect;
     const batches = stagger
@@ -177,6 +189,14 @@ export function compile(spec: Spec, inventory: InventoryView): IR {
       const local = module.compile({ ...effect, targets: batch.targets }, inventory);
       for (const { code, target } of local.notes) note(effect.id, code, target);
 
+      // Counted before placing, so an effect over budget costs nothing more.
+      const cost = local.tracks.reduce((sum, track) => sum + track.keyframes.reduce((n, k) => n + k.value.length + longest, 0), 0) * runs.length;
+      if (spent + cost > BUDGET) {
+        for (const key of batch.targets) note(effect.id, 'too-big', key);
+        continue;
+      }
+      spent += cost;
+
       for (const track of local.tracks) {
         if (WRAPPER_PROPERTIES.has(track.property) && !inventory.nodes.get(track.target)?.wrapped) {
           note(effect.id, 'unwrapped', track.target);
@@ -190,7 +210,7 @@ export function compile(spec: Spec, inventory: InventoryView): IR {
           order,
           start: runs[0].start,
           end: runs.at(-1)!.end,
-          keyframes: place(track, runs, effect.timing.easing),
+          keyframes: place(track, runs, easings),
         });
       }
     }

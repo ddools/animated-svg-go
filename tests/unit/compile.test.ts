@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compile, easingCss, planRuns, springPoints, staggerOrder } from '../../src/core/ir/compile';
+import { BUDGET, compile, easingCss, planRuns, springPoints, staggerOrder } from '../../src/core/ir/compile';
 import { ease } from '../../src/core/ir/evaluate';
 import type { InventoryView } from '../../src/core/ir/types';
 import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
@@ -188,6 +188,29 @@ describe('compile', () => {
       ['a', 'transform', 'translate(5px, 5px) rotate(360deg) translate(-5px, -5px)'],
       ['a', 'transform', 'translate(5px, 5px) rotate(90deg) translate(-5px, -5px)'],
     ]);
+    expect(ir.notes).toEqual([]);
+  });
+
+  it('counts a target listed twice once', () => {
+    const ir = compile(spec([effect('fade', ['a', 'a'])]), inventory({ key: 'a' }));
+    expect(ir.tracks).toHaveLength(1);
+  });
+
+  it('leaves out what would not fit in a file, quickly, and says so', () => {
+    const keys = Array.from({ length: 2000 }, (_, i) => `k${i}`);
+    const hostile = effect('spin', keys, { duration: 0.05, iterations: 'infinite', easing: { kind: 'spring', bounce: 0.9 } });
+    const started = performance.now();
+    const ir = compile(spec([hostile], { duration: 60 }), inventory(...keys.map((key) => ({ key }))));
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(ir.notes.find((n) => n.code === 'too-big')?.targets.length).toBeGreaterThan(1900);
+    const size = ir.tracks.reduce((sum, t) => sum + t.keyframes.reduce((n, k) => n + k.value.length + k.easing.length, 0), 0);
+    expect(size).toBeLessThanOrEqual(BUDGET);
+  });
+
+  it('leaves room for an ordinary heavy animation', () => {
+    const keys = Array.from({ length: 200 }, (_, i) => `k${i}`);
+    const springs = effect('spin', keys, { duration: 1, easing: { kind: 'spring', bounce: 0.4 } });
+    const ir = compile(spec([springs], { duration: 2 }), inventory(...keys.map((key) => ({ key }))));
     expect(ir.notes).toEqual([]);
   });
 

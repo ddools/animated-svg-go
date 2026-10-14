@@ -24,6 +24,7 @@
     overlap: (n) => `A later effect animates ${shapes(n)} at the same time. The later one plays.`,
     squeezed: () => "Runs past the end of the timeline, so it's been shortened.",
     outside: () => 'Starts after the timeline ends, so it never plays.',
+    'too-big': (n) => `Too much animation to fit in one file, so ${shapes(n)} won't move. Try fewer shapes or longer runs.`,
   };
 
   const TYPES = Object.keys(EFFECTS) as EffectType[];
