@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type BrowserContext } from '@playwright/test';
+import type { IR } from '../../src/core/ir/types';
 import { normalise, openPipeline } from '../helpers/pipeline';
 import { payloads } from './payloads';
 
@@ -55,8 +56,11 @@ async function detonate(context: BrowserContext, markup: string, sink: Sink) {
   return seen;
 }
 
-/** Static checks on the output tree. Runs in the browser so it uses a real XML parser. */
-function inspect(markup: string): string[] {
+/**
+ * Static checks on the output tree. Runs in the browser so it uses a real XML parser.
+ * An export may carry one <style>, first in the root, that loads nothing.
+ */
+function inspect({ markup, exported = false }: { markup: string; exported?: boolean }): string[] {
   const SVG = 'http://www.w3.org/2000/svg';
   const FORBIDDEN = new Set(['script', 'style', 'foreignobject', 'set', 'animate', 'animatemotion', 'animatetransform', 'animatecolor', 'mpath', 'discard', 'handler', 'listener']);
   const RASTER = /^data:image\/(png|jpeg|gif|webp);base64,/i;
@@ -72,10 +76,12 @@ function inspect(markup: string): string[] {
     if (element.namespaceURI !== SVG) problems.push(`<${element.nodeName}> leaves the SVG namespace when parsed as HTML`);
   }
   const keys = new Set(Array.from(doc.querySelectorAll('[data-k]'), (element) => element.getAttribute('data-k')));
+  const ours = exported ? doc.documentElement.firstElementChild : null;
+  if (exported && (ours?.localName !== 'style' || /url\(|@import/i.test(ours.textContent ?? ''))) problems.push('the export has no clean style first');
   for (const element of doc.querySelectorAll('*')) {
     const tag = element.localName;
     if (element.namespaceURI !== SVG) problems.push(`<${element.nodeName}> is not in the SVG namespace`);
-    if (FORBIDDEN.has(tag.toLowerCase())) problems.push(`<${tag}> survived`);
+    if (FORBIDDEN.has(tag.toLowerCase()) && element !== ours) problems.push(`<${tag}> survived`);
     for (const { name, value } of Array.from(element.attributes)) {
       const attr = name.toLowerCase();
       if (attr.startsWith('xmlns')) continue;
@@ -126,12 +132,74 @@ test.describe('hostile files come out inert', () => {
         expect(['not-svg', 'too-many-elements']).toContain(out.code);
         return;
       }
-      expect(await page.evaluate(inspect, out.svg)).toEqual([]);
+      expect(await page.evaluate(inspect, { markup: out.svg })).toEqual([]);
       for (const sink of SINKS) {
         expect(await detonate(context, out.svg, sink), sink).toEqual({ dialogs: [], requests: [] });
       }
     });
   }
+});
+
+/** A spin and a draw on the first animatable element, as the IR would have them. */
+function animation(key: string): IR {
+  const frames = (from: string, to: string) => [
+    { offset: 0, value: from, easing: 'linear' },
+    { offset: 1, value: to, easing: 'linear' },
+  ];
+  return {
+    duration: 2,
+    iterations: 'infinite',
+    notes: [],
+    tracks: [
+      { target: key, property: 'transform', keyframes: frames('rotate(0deg)', 'rotate(90deg)') },
+      { target: key, property: 'stroke-dashoffset', keyframes: frames('10', '0') },
+    ],
+  };
+}
+
+test.describe('hostile files stay inert once exported', () => {
+  for (const [name, raw] of Object.entries(all)) {
+    test(name, async ({ page, context }) => {
+      await openPipeline(page);
+      const out = await normalise(page, raw);
+      const key = out.ok && out.svg.match(/data-k="(k[0-9a-f]{8})"/)?.[1];
+      test.skip(!out.ok || !key, 'refused, or nothing to animate');
+      const exported = await page.evaluate(
+        ([svg, ir]) => ({ svg: window.__asg!.exports.animatedSvg(svg, ir), js: window.__asg!.exports.jsSnippet(svg, ir) }),
+        [out.ok ? out.svg : '', animation(key as string)] as const,
+      );
+      expect(await page.evaluate(inspect, { markup: exported.svg, exported: true })).toEqual([]);
+      for (const sink of SINKS) {
+        expect(await detonate(context, exported.svg, sink), sink).toEqual({ dialogs: [], requests: [] });
+      }
+      // The snippet's script is ours and runs. Nothing else may.
+      expect(await detonate(context, exported.js, 'inline in HTML')).toEqual({ dialogs: [], requests: [] });
+    });
+  }
+});
+
+test('the export check refuses a style that is not ours', async ({ page }) => {
+  await openPipeline(page);
+  const refused = await page.evaluate(() => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="5" height="5"/></svg>';
+    const attempt = (markup: string, style: string) => {
+      try {
+        window.__asg!.exports.exportMarkup(markup, 's1', style);
+        return false;
+      } catch {
+        return true;
+      }
+    };
+    return {
+      remote: attempt(svg, 'rect{fill:url(http://evil.test/x)}'),
+      import: attempt(svg, '@import "http://evil.test/x.css";'),
+      escaped: attempt(svg, 'rect{fill:u\\72l(http://evil.test/x)}'),
+      breakout: attempt(svg, 'rect{}</style><script>alert(1)</script><style>'),
+      second: attempt(svg.replace('<rect', '<style>rect{}</style><rect'), 'rect{}'),
+      ours: attempt(svg, '[data-asg="s1"] [data-for="k1"]{animation:s1-0 1s linear 1 both}'),
+    };
+  });
+  expect(refused).toEqual({ remote: true, import: true, escaped: true, breakout: true, second: true, ours: false });
 });
 
 test('a regex backtracking bomb does not stall the main thread', async ({ page }) => {

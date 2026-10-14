@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { css, scopeOf, selector } from '../../src/core/backends/css';
+import { frameCss } from '../../src/core/backends/sampler';
 import type { IR, Track } from '../../src/core/ir/types';
 
 const spin: Track = {
@@ -59,5 +60,13 @@ describe('css', () => {
   it('scopes each file and animation apart', () => {
     expect(scopeOf('<svg/>', ir([fade]))).toMatch(/^s[0-9a-f]{8}$/);
     expect(scopeOf('<svg/>', ir([fade]))).not.toBe(scopeOf('<svg/>', ir([spin])));
+  });
+});
+
+describe('frameCss', () => {
+  it('writes the values at one moment as static rules on the same selectors', () => {
+    expect(frameCss(ir([fade, dash]), 1, 's1')).toBe(
+      '[data-asg="s1"] [data-for="k1a"]{opacity:0.5 !important}\n[data-asg="s1"] [data-k="k2b"]{stroke-dashoffset:20 !important}',
+    );
   });
 });
