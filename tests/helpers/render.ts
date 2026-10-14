@@ -31,7 +31,14 @@ export async function render(context: BrowserContext, svg: string, box?: { width
   await page.evaluate((s) => (document.querySelector<HTMLElement>('#i')!.style.transform = `scale(${s})`), scale);
   const clip = { x: 0, y: 0, width: Math.max(1, Math.round(size.width * scale)), height: Math.max(1, Math.round(size.height * scale)) };
   await page.setViewportSize({ width: Math.max(clip.width, 16), height: Math.max(clip.height, 16) });
-  const png = await page.screenshot({ clip });
+  // Linux WebKit paints an animated SVG image unanimated at first. Wait for paint, then until two shots agree.
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  let png = await page.screenshot({ clip });
+  for (let i = 0; i < 10; i++) {
+    const next = await page.screenshot({ clip });
+    if (next.equals(png)) break;
+    png = next;
+  }
   await page.close();
   return { png, ...size };
 }
