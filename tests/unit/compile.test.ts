@@ -157,6 +157,17 @@ describe('compile', () => {
     expect(swapped.notes).toEqual([{ effect: second.id, code: 'overlap', targets: ['a'] }]);
   });
 
+  it('stacks transforms, one track per effect in list order, with no overlap', () => {
+    const slow = effect('spin', ['a'], { start: 0, duration: 4 });
+    const fast = effect('spin', ['a'], { start: 1, duration: 1 }, { params: { degrees: 90 } });
+    const ir = compile(spec([slow, fast]), inventory({ key: 'a' }));
+    expect(ir.tracks.map((t) => [t.target, t.property, t.keyframes.at(-1)!.value])).toEqual([
+      ['a', 'transform', 'translate(5px, 5px) rotate(360deg) translate(-5px, -5px)'],
+      ['a', 'transform', 'translate(5px, 5px) rotate(90deg) translate(-5px, -5px)'],
+    ]);
+    expect(ir.notes).toEqual([]);
+  });
+
   it('notes missing targets and refuses to move what has no wrapper', () => {
     const spin = effect('spin', ['gone', 'loose', 'ok']);
     const ir = compile(spec([spin]), inventory({ key: 'loose', wrapped: false }, { key: 'ok' }));

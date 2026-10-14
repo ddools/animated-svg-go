@@ -3,9 +3,10 @@
 // Every track spans the whole timeline, so the timeline can loop as one and every backend
 // shares one clock. Each effect describes one run; this file places the runs, mirrors
 // reversed ones, merges effects on the same target and property, and holds values between them.
+// Transforms are the exception: they stack, one track per effect, in list order.
 import { EFFECTS, type Easing, type EffectModule, type EffectType, type Spec, type Timing } from '../spec/schema';
 import { num } from './format';
-import { WRAPPER_PROPERTIES, type InventoryView, type IR, type Keyframe, type LocalTrack, type Note, type NoteCode, type Track } from './types';
+import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type InventoryView, type IR, type Keyframe, type LocalTrack, type Note, type NoteCode, type Track } from './types';
 
 // Floating point slack when fitting runs into the timeline, in seconds.
 const EPSILON = 1e-9;
@@ -116,7 +117,8 @@ export function compile(spec: Spec, inventory: InventoryView): IR {
         note(effect.id, 'unwrapped', track.target);
         continue;
       }
-      const id = `${track.target}|${track.property}`;
+      // Transforms stack, so each effect keeps its own track. Everything else merges into one.
+      const id = `${track.target}|${track.property}${ADDITIVE_PROPERTIES.has(track.property) ? `|${effect.id}` : ''}`;
       const group = groups.get(id) ?? groups.set(id, { target: track.target, property: track.property, windows: [] }).get(id)!;
       group.windows.push({
         effect: effect.id,

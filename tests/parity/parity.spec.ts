@@ -47,6 +47,13 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
     ],
   },
   { name: 'steps, reversed', effects: [{ type: 'draw', labels: ['line'], timing: { duration: 2, direction: 'reverse', easing: { kind: 'steps', n: 5, pos: 'end' } } }] },
+  {
+    name: 'two spins stacked on one shape, about different pivots',
+    effects: [
+      { type: 'spin', labels: ['nested'], params: { degrees: 200 }, timing: { duration: 2 } },
+      { type: 'spin', labels: ['nested'], params: { degrees: -90 }, timing: { start: 0.4, duration: 1 }, pivot: { fx: 0, fy: 0 } },
+    ],
+  },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
 

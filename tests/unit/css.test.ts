@@ -29,6 +29,13 @@ describe('css', () => {
     expect(css(ir([fade], 1), 's1')).toContain('linear 1 both');
   });
 
+  it('adds stacked transforms, and says nothing where nothing stacks', () => {
+    expect(css(ir([fade, spin, spin]), 's1')).toContain(
+      '{animation:s1-0 2s linear infinite both,s1-1 2s linear infinite both,s1-2 2s linear infinite both;animation-composition:replace,add,add}',
+    );
+    expect(css(ir([fade, dash]), 's1')).not.toContain('animation-composition');
+  });
+
   it('plays nothing under reduced motion', () => {
     const out = css(ir([fade]), 's1');
     const guard = out.indexOf('@media (prefers-reduced-motion:no-preference)');
@@ -69,6 +76,13 @@ describe('frameCss', () => {
   it('writes the values at one moment as static rules on the same selectors', () => {
     expect(frameCss(ir([fade, dash]), 1, 's1')).toBe(
       '[data-asg="s1"] [data-for="k1a"]{opacity:0.5 !important}\n[data-asg="s1"] [data-k="k2b"]{stroke-dashoffset:20 !important}',
+    );
+  });
+
+  it('writes stacked transforms as one list, in track order', () => {
+    const half = 'translate(5px, 5px) rotate(45deg) translate(-5px, -5px)';
+    expect(frameCss(ir([{ ...spin, keyframes: spin.keyframes.map((k) => ({ ...k, easing: 'linear' })) }, spin]), 1, 's1')).toBe(
+      `[data-asg="s1"] [data-for="k1a"]{transform:${half} ${half} !important}`,
     );
   });
 });

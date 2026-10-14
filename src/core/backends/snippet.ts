@@ -1,5 +1,5 @@
 // The two snippets: markup plus CSS to paste, or markup plus a small WAAPI script. See docs/ARCHITECTURE.md section 5.
-import type { IR } from '../ir/types';
+import { ADDITIVE_PROPERTIES, type IR } from '../ir/types';
 import { checkValue, css, exportMarkup, scopeOf, selector } from './css';
 
 const camel = (property: string) => property.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
@@ -17,14 +17,15 @@ export function jsSnippet(svg: string, ir: IR): string {
     // Relative to the root, which the script finds by its scope.
     selector(scope, track).replace(`[data-asg="${scope}"] `, ''),
     track.keyframes.map(({ offset, value, easing }) => ({ offset, easing: checkValue(easing), [camel(track.property)]: checkValue(value) })),
+    ADDITIVE_PROPERTIES.has(track.property) ? 'add' : 'replace',
   ]);
   // JSON is data, and with "<" escaped it cannot close the script element.
   const data = JSON.stringify(tracks).replace(/</g, '\\u003c');
-  const timing = `{ duration: ${ir.duration * 1000}, iterations: ${ir.iterations === 'infinite' ? 'Infinity' : 1}, fill: 'both' }`;
+  const timing = `{ duration: ${ir.duration * 1000}, iterations: ${ir.iterations === 'infinite' ? 'Infinity' : 1}, fill: 'both', composite }`;
   const script = `(() => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const root = document.querySelector('[data-asg="${scope}"]');
-  for (const [selector, keyframes] of ${data}) root.querySelector(selector)?.animate(keyframes, ${timing});
+  for (const [selector, keyframes, composite] of ${data}) root.querySelector(selector)?.animate(keyframes, ${timing});
 })();`;
   return `${exportMarkup(svg, scope)}\n<script>\n${script}\n</script>`;
 }

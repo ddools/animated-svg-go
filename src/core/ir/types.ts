@@ -4,6 +4,12 @@ import type { Inventory } from '../parse/inventory';
 /** Applied to the data-anim wrapper. Everything else is applied to the element itself (invariant 3). */
 export const WRAPPER_PROPERTIES = new Set<Property>(['transform', 'opacity']);
 
+/**
+ * Composed, not replaced: each effect has its own track, and a target's tracks stack in list order
+ * (CSS animation-composition: add, WAAPI composite: 'add'). The wrapper is ours, so there is nothing under them.
+ */
+export const ADDITIVE_PROPERTIES = new Set<Property>(['transform']);
+
 export type Property = 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray';
 
 export type Keyframe = {
@@ -23,7 +29,7 @@ export type NoteCode =
   | 'no-length' // nothing to draw along
   | 'no-stroke' // nothing to draw with
   | 'dashed' // its own dashes are replaced while it draws
-  | 'overlap' // a later effect animates the same thing at the same time, and wins
+  | 'overlap' // a later effect animates the same thing at the same time, and wins. Never for transforms, which stack
   | 'squeezed' // did not fit before the end of the timeline, so it was shortened
   | 'outside'; // starts after the timeline ends
 

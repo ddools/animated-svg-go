@@ -4,7 +4,7 @@
 import { num } from '../ir/format';
 import { fnv1a } from '../parse/hash';
 import { exportStyleIsSafe, sanitise } from '../parse/sanitise';
-import { WRAPPER_PROPERTIES, type IR, type Keyframe, type Track } from '../ir/types';
+import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type IR, type Keyframe, type Track } from '../ir/types';
 
 // The serialised root's start tag, self-closing if the drawing is empty.
 // XMLSerializer double-quotes every attribute and escapes '"' inside.
@@ -59,17 +59,22 @@ function keyframesRule(name: string, track: Track): string {
 /** Keyframes for every track, and the rules that play them, inside a reduced-motion guard. */
 export function css(ir: IR, scope: string): string {
   const keyframes: string[] = [];
-  const animations = new Map<string, string[]>();
+  const animations = new Map<string, { list: string[]; composition: string[] }>();
   if (!Number.isFinite(ir.duration) || ir.duration <= 0) throw new Error(`Unexpected duration: ${ir.duration}`);
   const count = ir.iterations === 'infinite' ? 'infinite' : '1';
   ir.tracks.forEach((track, i) => {
     const name = `${scope}-${i}`;
     keyframes.push(keyframesRule(name, track));
     const rule = selector(scope, track);
-    const list = animations.get(rule) ?? animations.set(rule, []).get(rule)!;
-    list.push(`${name} ${ir.duration}s linear ${count} both`);
+    const entry = animations.get(rule) ?? animations.set(rule, { list: [], composition: [] }).get(rule)!;
+    entry.list.push(`${name} ${ir.duration}s linear ${count} both`);
+    entry.composition.push(ADDITIVE_PROPERTIES.has(track.property) ? 'add' : 'replace');
   });
-  const rules = [...animations].map(([rule, list]) => `${rule}{animation:${list.join(',')}}`);
+  const rules = [...animations].map(([rule, { list, composition }]) => {
+    // Stacked transforms add, in list order. One alone adds onto nothing, so it is written only where two stack.
+    const stack = composition.filter((c) => c === 'add').length > 1 ? `;animation-composition:${composition.join(',')}` : '';
+    return `${rule}{animation:${list.join(',')}${stack}}`;
+  });
   // With reduced motion nothing plays, and the drawing shows as it was authored.
   return `${keyframes.join('\n')}\n@media (prefers-reduced-motion:no-preference){\n${rules.join('\n')}\n}`;
 }

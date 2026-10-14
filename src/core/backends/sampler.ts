@@ -8,7 +8,14 @@ import { checkValue, selector } from './css';
  * Important, so an authored inline style cannot beat them, as an animation would not let it.
  */
 export function frameCss(ir: IR, t: number, scope: string): string {
-  return evaluate(ir, t)
-    .map((sample) => `${selector(scope, sample)}{${sample.property}:${checkValue(sample.value)} !important}`)
-    .join('\n');
+  // Static rules can't compose, so stacked transforms are written as one list, in track order.
+  // compile gives every other property one track per target, so nothing else is joined.
+  const rules = new Map<string, string>();
+  for (const sample of evaluate(ir, t)) {
+    const rule = `${selector(scope, sample)}{${sample.property}:`;
+    const value = checkValue(sample.value);
+    const before = rules.get(rule);
+    rules.set(rule, before === undefined ? value : `${before} ${value}`);
+  }
+  return [...rules].map(([rule, value]) => `${rule}${value} !important}`).join('\n');
 }
