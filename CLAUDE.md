@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M2 built. Drop, pick or paste an SVG; it renders in the sandbox with a layer tree, canvas picking, lasso, select-more-like-this tools and a file panel. No animation yet (M3). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M3 built. Select shapes, add Spin, Fade or Draw, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. The last file and its effects autosave. No export yet (M4). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -39,16 +39,16 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/workers/`, and all four `tests/` folders. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile), `src/core/backends/waapi.ts`, `src/workers/`, and all four `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
   pages/                    Astro pages (landing, editor, about)
-  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, sandbox.ts, state and selection stores, load.ts, pipeline.ts
+  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
     parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts, inventory.ts
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
-    ir/                     types.ts, compile.ts, evaluate.ts (sampler maths)
+    ir/                     types.ts, format.ts, compile.ts, evaluate.ts (sampler maths, M4)
     backends/               waapi.ts, css.ts, snippet.ts, sampler.ts
     export/                 gif.ts, video.ts
   workers/                  pipeline.worker.ts (the SVGO pass only. Sanitise and rewrite need a DOM, so they run on the main thread)
@@ -105,3 +105,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - `pnpm test:e2e` builds the site and serves it on port 4399, so the CSP is live. The dev server does not apply the CSP.
 - Astro 7 puts `astro dev` and `astro preview` in the background when an AI agent runs them. Pass `--ignore-lock` for a foreground server, and stop any server you start.
 - Playwright Firefox can't launch inside the Claude Code command sandbox. Run Chromium and WebKit locally and let CI cover Firefox.
+- An authored `pathLength` rescales dash values. The inventory's `length` already accounts for it; use that, not `getTotalLength()`.
+- A `<label>` labels its first labelable descendant, and `<output>` counts. Don't put an `<output>` before the input inside a label: the slider loses its name.
+- Anything that compiles inside a Svelte `$effect` tracks the spec. Wrap one-off calls in `untrack`, or the drawing remounts on every edit.
+- Agent worktrees live in `.claude/worktrees/`. Lint, `tsc` and git ignore them.

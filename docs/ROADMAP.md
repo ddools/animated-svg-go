@@ -47,12 +47,14 @@ Measured: the largest corpus file (3.8 MB) loads in 1.7 s in Chromium and 1.15 s
 
 Lead: Opus 5.5 designs spec, IR, Spin and Draw (one wrapper effect, one element effect). Sonnet 5.5 implements Fade from that pattern.
 
-- Zod spec, Immer undo/redo, IndexedDB autosave.
+- Zod spec, snapshot undo/redo, IndexedDB autosave.
 - `compile -> IR -> waapi.ts`. Playhead, play/pause, scrub, loop.
 - Effects: Spin (with pivot handle), Fade, Draw.
 - Schema-driven control panel generated from each effect's `ui` description.
 
 Done when: rotating an element that carries nested authored transforms looks correct in Chrome, Firefox and Mac Safari, and slider drags hold 60 fps in all three for a 200-element file.
+
+Measured: compile plus preview update for a 200-shape spin takes 1.5 ms in Chromium and 1.3 ms in WebKit, headless. A spin inside translate, non-uniform scale, rotate and skew holds its centre to the pixel in both.
 
 ## M4. CSS export, snippets and parity (risk 3)
 

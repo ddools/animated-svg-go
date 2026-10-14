@@ -83,10 +83,10 @@ Two PRs to `main`. A merges before B starts.
 | 2 | `waapi.ts`: wrapper tracks and element tracks, scrub, throttled updates | Opus | |
 | 3 | Spin with pivot handle. The pattern for transform effects | Opus | |
 | 4 | Draw. The pattern for paint and dash effects on the element | Opus | |
-| 5 | Fade, from the pattern | Sonnet | Opus reviews |
-| 6 | Immer undo/redo, IndexedDB autosave | Sonnet | Opus reviews |
-| 7 | Playhead, play/pause, scrub, loop UI | Sonnet | |
-| 8 | Schema-driven control panel from each effect's `ui` | Sonnet | |
+| 5 | Fade, from the pattern | `effect-builder` (Sonnet) | Opus reviews |
+| 6 | Snapshot undo/redo, IndexedDB autosave | Opus (moved from Sonnet: built on the new contracts) | |
+| 7 | Playhead, play/pause, scrub, loop UI | Opus (moved from Sonnet) | |
+| 8 | Schema-driven control panel from each effect's `ui` | Opus (moved from Sonnet) | |
 | 9 | WebKit e2e run on nested-transform fixtures | `webkit-checker` | |
 | 10 | Nested-transform rotation and slider frame rate in all three browsers | Der | Sign-off |
 

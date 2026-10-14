@@ -44,7 +44,8 @@ Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s 
 7. **Render** into the sandbox iframe (section 2, layer 2). Wait for the iframe's `load` event first: Firefox replaces a new iframe's first document when it finishes loading.
 8. **Inventory.** `core/parse/inventory.ts`, built from the live tree in the sandbox.
    - Up front, per `data-k` element: type, label, parent, children, `referenced` (inside `defs`, `symbol`, `clipPath`, `mask`, `pattern`, `marker`), `hasFilter`. This is cheap.
-   - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, `getTotalLength()` for shapes, computed fill, stroke and stroke width, `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
+   - Up front also `wrapped`: whether the element has a `data-anim` wrapper.
+   - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, dash length for shapes (`pathLength` if set, else `getTotalLength()`), computed fill, stroke and stroke width, `dashed` (has its own `stroke-dasharray`), `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
    - Still to add when an effect needs them: closed path, `vector-effect`, heavy filter, `preserveAspectRatio="none"`, text that needs a font.
 
 On top of the inventory, the editor's selection tools (same type, same fill, same stroke, siblings, parent) and the lasso work on visible nodes only. On the world map below they take 60 to 350 ms.
@@ -108,68 +109,93 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 
 ### Spec (the only state)
 
+The code is `src/core/spec/schema.ts` (Zod, types inferred). It is the source of truth; this is the shape.
+
 ```ts
 type Spec = {
   version: 1;
-  duration: number;            // seconds, global timeline length
-  loop: boolean;
-  reducedMotion: 'final-frame' | 'opacity-only' | 'none';
+  duration: number;            // seconds, the timeline, 0.1 to 60
+  loop: boolean;               // the whole timeline repeats
   effects: Effect[];
 };
 
 type Effect = {
   id: string;
-  type: EffectType;            // 'fade' | 'spin' | 'draw' | 'pop' | 'float' | 'wiggle' | 'pulse' | 'slide' | 'colour' | 'stagger'
+  type: EffectType;            // 'spin' | 'fade' | 'draw' in M3. Discriminated union: params are typed per effect
   targets: string[];           // data-k values
-  params: Record<string, number | string | boolean>; // validated by the effect's own Zod schema
+  params: SpinParams | FadeParams | DrawParams;
   timing: {
-    start: number; duration: number; delay: number;
-    easing: Easing; iterations: number | 'infinite';
+    start: number;             // seconds from the start of the timeline
+    duration: number;          // seconds per run
+    easing: Easing;
+    iterations: number | 'infinite';   // whole runs. 'infinite' repeats until the timeline ends
     direction: 'normal' | 'reverse' | 'alternate';
   };
-  pivot?: { fx: number; fy: number }; // fraction of bbox, default 0.5/0.5
-  seed?: number;
+  pivot?: { fx: number; fy: number }; // fraction of each target's bbox, default 0.5/0.5. Transform effects only
 };
 
 type Easing =
   | { kind: 'cubic'; p: [number, number, number, number] }
-  | { kind: 'steps'; n: number; pos: 'start' | 'end' }
-  | { kind: 'spring'; stiffness: number; damping: number }; // compiled to linear() stops
+  | { kind: 'steps'; n: number; pos: 'start' | 'end' };
 ```
 
-Each effect lives in `core/spec/effects/<type>.ts` and exports `{ schema, defaults, ui, compile }`. `ui` describes controls (label, control type, min, max, step, unit) so the editor generates panels from data. `compile(effect, inventory) -> Track[]`.
+Arriving later, each with a default so saved specs stay valid: `spring` easing (M5, compiled to `linear()` stops), `seed` (M5), `reducedMotion` (M4), per-target delay (M5, with stagger).
+
+Each effect lives in `core/spec/effects/<type>.ts` and exports a params schema (with defaults) and a module `{ type, label, params, ui, transform, compile }`. `ui` describes controls (label, min, max, step, unit) so the editor generates panels from data. `transform` says whether it has a pivot. `compile(effect, inventory)` describes **one run** per target, offsets 0 to 1. Timing is the shared compiler's job, never the effect's.
 
 ### IR
 
+The code is `src/core/ir/types.ts` and `compile.ts`.
+
 ```ts
+type IR = {
+  duration: number;            // seconds. Every track runs exactly this long
+  iterations: 1 | 'infinite';  // from spec.loop
+  tracks: Track[];
+  notes: Note[];               // what the editor should tell the user, per effect
+};
+
 type Track = {
   target: string;              // data-k. The property decides wrapper or element, see rules
-  property: 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray' | 'fill' | 'stroke';
-  keyframes: { offset: number; value: string; easing?: string }[]; // CSS-ready strings
-  timing: { delay: number; duration: number; iterations: number | 'infinite'; direction: string; fill: 'both' };
+  property: 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray';  // fill and stroke join in M5
+  keyframes: { offset: number; value: string; easing: string }[]; // CSS-ready. Easing runs to the next keyframe
 };
 ```
 
 Rules:
-- `transform` and `opacity` tracks apply to the wrapper (`[data-for="k"]`). `fill`, `stroke`, `stroke-dashoffset` and `stroke-dasharray` tracks apply to the element itself (`[data-k="k"]`). After style inlining the element carries its own presentation attributes, and those beat anything inherited from the wrapper. CSS and WAAPI override presentation attributes without writing to them.
-- Paint and dash effects on a `g` target compile to one track per descendant shape, each with its own `getTotalLength()`.
-- Every transform keyframe uses the same function list, so CSS interpolates function by function. Pivot is baked in: `translate(ox px, oy px) rotate(a) scale(s) translate(-ox px, -oy px)`.
-- Effects with many targets (stagger) share one keyframe set and vary only `delay`. The CSS backend emits one `@keyframes` plus per-element `--i` custom properties.
+- **Every track spans the whole timeline.** `compile` places each effect's runs at `start + i × duration`, holds the first value from 0 and the last to the end, and puts easing on keyframes. Backends play every track with the same timing: the timeline's duration, 1 or infinite iterations, linear, `fill: both`. CSS can't loop a sequence (draw, then fade, then again) any other way, and one shared clock makes scrub, export and the sampler agree by construction.
+- **Whole runs only.** Runs that don't fit before the end are dropped. One run that doesn't fit is shortened to fit. Both get a note. Cutting a run part-way would need easing maths in compile and can't cut `steps()` exactly.
+- **Reversed runs mirror their easing**, as CSS `reverse` and `alternate` do: `cubic-bezier(x1,y1,x2,y2)` becomes `(1-x2,1-y2,1-x1,1-y1)`; `steps(n,start)` becomes `steps(n,end)`.
+- **Two keyframes at one offset are a jump.** WAAPI takes that as written. CSS merges duplicate percentages, so the CSS backend (M4) must nudge the second one.
+- **Effects on the same target and property merge**, holding the last value between them: fade in, then fade out later, is one track. Where two overlap in time, the later effect in the list wins and the other is dropped for that target, with a note. Composing two at once (spin plus pop) is an M5 decision. `animation-composition: add` is the likely route; check it in SVG-as-image first.
+- `transform` and `opacity` tracks apply to the wrapper (`[data-for="k"]`). The rest apply to the element itself (`[data-k="k"]`). After style inlining the element carries its own presentation attributes, and those beat anything inherited from the wrapper. CSS and WAAPI override presentation attributes without writing to them. An element with no wrapper (a `<switch>` child) can't take wrapper tracks; `compile` drops them with a note.
+- Paint and dash effects on a `g` target compile to one track per descendant shape, each with its own length.
+- Every transform keyframe uses the same function list, so CSS interpolates function by function. Pivot is baked in: `translate(ox px, oy px) rotate(a deg) translate(-ox px, -oy px)`, from the wrapper's box.
+- Values are rounded to three decimal places, so the same spec always gives the same strings.
+- Stagger (M5) can no longer just vary `delay` on shared keyframes: on a looping timeline a delay shifts the phase and wraps across the seam. Decide in M5 between per-target keyframes and a negative-delay phase shift.
 
 ### Backends
 
-- `waapi.ts`: `wrapper.animate(keyframes, timing)` inside the sandbox. Scrub by pausing all and setting `currentTime`. Timing-only changes via `effect.updateTiming()`; keyframe changes via `effect.setKeyframes()`, throttled to one per animation frame while a slider drags. Full rebuild on `pointerup`.
-- `css.ts`: `<style>` block inside the SVG with `@keyframes`, per-wrapper rules, and the reduced-motion media query.
-- `snippet.ts`: inline SVG + CSS, or inline SVG + a tiny WAAPI script with JSON keyframes and a `matchMedia('(prefers-reduced-motion: reduce)')` check.
-- `sampler.ts`: `evaluate(ir, t)` returns static values per wrapper. Used by raster export and the parity test.
+- `waapi.ts`: `element.animate()` inside the sandbox. One clock animation with no keyframes on the root `<svg>` is the time source, so play and scrub work with no effects. `apply(ir)` diffs tracks by target and property: `setKeyframes()` and `updateTiming()` for existing ones, `animate()` (synced to the clock) for new ones, `cancel()` for removed ones. The editor calls it at most once per animation frame, which is the slider throttle. Scrub pauses nothing; it sets `currentTime` on all.
+- `css.ts` (M4): `<style>` block inside the SVG with `@keyframes`, per-wrapper rules, and the reduced-motion media query.
+- `snippet.ts` (M4): inline SVG + CSS, or inline SVG + a tiny WAAPI script with JSON keyframes and a `matchMedia('(prefers-reduced-motion: reduce)')` check.
+- `sampler.ts` (M4): `evaluate(ir, t)` returns static values per wrapper. Used by raster export and the parity test.
+
+### Editor state
+
+- `editor/project.svelte.ts` holds the spec. Undo keeps whole spec snapshots (a spec is a few KB), capped at 100. A slider drag changes the spec on every `input` and becomes one undo step on `change`.
+- Autosave keeps one IndexedDB slot: file name, the original file text, and the spec. Restore is offered with a button, never automatic, and runs the text back through the whole pipeline and the spec through the schema. Storage is not trusted, and the pipeline is deterministic, so `data-k` keys still match.
+- Play state and the playhead are view state, outside the spec and outside undo.
+
+Measured: compile plus `apply` for a 200-shape spin takes 1.5 ms in Chromium and 1.3 ms in WebKit, headless on an M-series Mac.
 
 ## 4. Effects catalogue (v1)
 
 | Effect | Properties | Key params | Notes |
 | --- | --- | --- | --- |
 | Fade | opacity | from, to | |
-| Spin | transform | degrees, turns | Pivot handle |
-| Draw | stroke-dashoffset/dasharray | from %, to % | Measure `getTotalLength()`. Fill-only shapes get "outline then fill" variant. Warn on authored dashes |
+| Spin | transform | degrees (one param: 720 is two turns) | Pivot handle |
+| Draw | stroke-dashoffset/dasharray | from %, to % | Dash length from `pathLength` if set, else `getTotalLength()`. Gap is twice the length so no round cap shows at 0 %. Fill-only shapes get a note in M3; the "outline then fill" variant arrives in M5 with Colour shift. Notes authored dashes |
 | Pop | transform | scale, overshoot | Spring easing |
 | Float | transform | distance x/y | Alternate direction |
 | Wiggle | transform | angle, frequency | Seeded noise baked to keyframes |
@@ -203,6 +229,9 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 - **Safari:** no CSS `d` up to 27.1 (WebKit cites performance). Long bug history around SVG `transform-origin` (WebKit 194903, 201854), which invariant 4 avoids. Complete WebCodecs only from 26.0.
 - **Overflow:** root `<svg>` clips. Offer "add padding" that expands the viewBox.
 - **Strokes:** `getBBox()` excludes stroke width. Pad by half `stroke-width`.
+- **`pathLength`:** an authored `pathLength` rescales dash values. Draw uses it as the length instead of `getTotalLength()`, or the dash would be the wrong size.
+- **Half turns:** a centrally symmetric shape turned 180° has the same box. Tests that check a spin by its bounding box must avoid half-turn times.
+- **Unverified:** how `vector-effect: non-scaling-stroke` changes the units of dash values in each engine.
 - **Accessibility:** reduced-motion fallback in every SVG, CSS and JS export (GIF and MP4 can't have one); keep `<title>`; add `role="img"` and `aria-label`; layer tree is the keyboard alternative to canvas picking; editor autoplay pauses under reduced motion.
 - **Targets:** desktop Chrome, Firefox and Safari on Mac. Mobile is not a v1 target. If it becomes one, measure iOS Low Power Mode rAF throttling (~30 fps) and the iOS canvas area cap (~16.7 MP) on a real device first. Both figures are unverified.
 - **Unverified, measure in each browser:** `prefers-reduced-motion` inside SVG-as-image in every engine, Safari `linear()` support since 17.2.
@@ -216,7 +245,7 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 | dompurify (3.4.x) | Sanitiser | MPL-2.0 / Apache-2.0 |
 | svgo (4.x) | Optimiser | MIT |
 | zod | Spec validation | MIT |
-| immer | Undo/redo patches | MIT |
+| immer | Undo/redo patches. Not used: undo keeps snapshots (decision log, 14 Oct) | MIT |
 | idb-keyval | Local project storage | Apache-2.0 |
 | mediabunny | MP4 via WebCodecs | MPL-2.0 |
 | gifenc | GIF encoding | MIT |
@@ -254,4 +283,11 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Picking uses an overlay in the parent and `elementFromPoint()`, with no listeners inside the sandbox.
 - 2026-10-13: Security review of M2 part A. Nothing critical or high. Fixed: sandbox tests could pass without the sandbox (now has a no-CSP control), `mount()` accepted non-SVG elements, the sandbox CSP was installed after the import and lacked `base-uri` and `form-action`, `measure()` could throw in Firefox. Links become groups in the sandbox.
 - 2026-10-14: The layer tree renders only the rows in view (fixed row height, no dependency). Content inside `defs`, `clipPath`, `mask`, `pattern`, `marker` and `symbol` is left out of the tree and the canvas tools.
+- 2026-10-14: M3 contracts approved. Every IR track spans the whole timeline, with runs unrolled into keyframes, so a sequence can loop in CSS and every backend shares one clock.
+- 2026-10-14: Whole runs only. Runs past the end are dropped; a single run that doesn't fit is shortened. Reversed runs mirror their easing.
+- 2026-10-14: Effects on the same target and property merge with holds between. Overlaps resolve to the later effect, with a note. Composition is deferred to M5.
+- 2026-10-14: `timing.delay` removed; `start` places an effect. Spring easing, `seed` and `reducedMotion` arrive with the milestones that use them.
+- 2026-10-14: No Immer. Undo keeps whole spec snapshots made with `structuredClone`. Immer stays approved if specs grow.
+- 2026-10-14: Autosave stores the original file text, not normalised markup, and restore re-runs the pipeline. Offered, never automatic.
+- 2026-10-14: Draw in M3 covers stroked shapes. Fill-only shapes wait for M5.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
