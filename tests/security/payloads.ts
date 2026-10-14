@@ -15,6 +15,18 @@ export const payloads: Record<string, string> = {
   'script svg prefix': `<s:svg xmlns:s="http://www.w3.org/2000/svg"><s:script>alert(1)</s:script></s:svg>`,
   'script xhtml namespace': svg(`<x:script xmlns:x="http://www.w3.org/1999/xhtml">alert(1)</x:script>`),
 
+  // Root box styling: pasted inline, the export would cover the host page
+  'root style covers the page': svg(
+    '<text y="5">Fake banner</text>',
+    'overflow="visible" class="fixed inset-0 z-50" style="position:fixed;inset:0;z-index:2147483647;width:100vw;height:100vh;background:white"',
+  ),
+  'root transform covers the page': svg('<rect width="10" height="10" fill="white"/><text y="5">Fake</text>', 'transform="translate(0 -300) scale(40)" transform-origin="0 0"'),
+  'root filter floods the page': svg(
+    '<defs><filter id="f" x="-200" y="-200" width="400" height="400"><feFlood flood-color="red"/></filter></defs><rect width="5" height="5"/>',
+    'filter="url(#f)"',
+  ),
+  'spoofed export scope': svg('<g data-asg="sdeadbeef"><rect width="5" height="5"/></g>'),
+
   // Event handlers
   'onload on root': svg('<rect/>', 'onload="alert(1)"'),
   'onload uppercase': svg('<rect/>', 'ONLOAD="alert(1)"'),

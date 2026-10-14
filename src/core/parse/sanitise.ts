@@ -43,6 +43,16 @@ function cssValueIsSafe(value: string): boolean {
   return !/url\(/i.test(value.replace(LOCAL_URL_FN, ''));
 }
 
+/**
+ * The final check on an export's own <style>, as text. Exports go through sanitise() like uploads,
+ * so no <style> survives that; css.ts adds its own afterwards, as a string. Never parsed into a DOM
+ * on the main thread, because Chromium reports a CSP violation for any <style> it parses there.
+ * No "<", ">" or "&", so the text cannot end the element, hide a character or spell "]]>", and nothing that loads.
+ */
+export function exportStyleIsSafe(text: string): boolean {
+  return !/[<>&]/.test(text) && cssValueIsSafe(text);
+}
+
 /** Sanitises an SVG string into an inert DOM tree. The tree is never adopted into the app document. */
 export function sanitise(svg: string): Sanitised {
   const purify = DOMPurify(window);

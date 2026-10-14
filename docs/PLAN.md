@@ -102,12 +102,12 @@ Done. Merged in PR #7.
 
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
-| 1 | `css.ts` and `snippet.ts`, with reduced-motion handling | Opus | |  |
-| 2 | `sampler.ts`: exact cubic-bezier, steps and `linear()` | Opus | |  |
-| 3 | Sanitiser export profile | Opus | `security-reviewer` |  |
-| 4 | `pnpm parity` harness: preview, CSS in `<img>`, sampler | Opus | |  |
-| 5 | Copy and download UI | Sonnet | |  |
-| 6 | Run parity in Chromium and WebKit. Report failures | `corpus-runner`, `webkit-checker` | All v1 effects pass |  |
+| 1 | `css.ts` and `snippet.ts`, with reduced-motion handling | Opus | | ✓ |
+| 2 | `sampler.ts`: exact cubic-bezier, steps and `linear()` | Opus | | ✓ (`linear()` moved to M5) |
+| 3 | Export check in the sanitiser (built as upload rules plus a style text check, not a profile) | Opus | `security-reviewer` | ✓ Reviewed twice. Two mediums (root attributes covering the host page), five lows and nits, all fixed |
+| 4 | `pnpm parity` harness: preview, CSS in `<img>`, sampler | Opus | | ✓ |
+| 5 | Copy and download UI | Opus (moved from Sonnet: small, and built on the new export API) | | ✓ |
+| 6 | Run parity in Chromium and WebKit. Report failures | `corpus-runner`, `webkit-checker` | All v1 effects pass | ✓ Opus ran parity, corpus and the WebKit e2e project directly; the subagents were not used |
 | 7 | Drop an exported SVG into a plain page in Safari. Compare to the editor | Der | Sign-off |  |
 
 ## Stage 5. Effects catalogue and controls (M5)

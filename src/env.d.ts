@@ -8,5 +8,8 @@ interface Window {
     project: typeof import('./editor/project.svelte').project;
     playback: typeof import('./editor/playback.svelte').playback;
     mountRaw: (svg: string) => import('./editor/sandbox').Sandbox;
+    exports: typeof import('./core/backends/css') &
+      typeof import('./core/backends/snippet') &
+      typeof import('./core/backends/sampler');
   };
 }

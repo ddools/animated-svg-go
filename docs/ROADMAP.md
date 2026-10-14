@@ -61,12 +61,14 @@ Measured: compile plus preview update for a 200-shape spin takes 1.5 ms in Chrom
 Lead: Opus 5.5
 
 - `css.ts`, `snippet.ts`, copy and download UI.
-- `sampler.ts` with exact cubic-bezier, steps and `linear()` evaluation.
+- `sampler.ts` with exact cubic-bezier and steps evaluation. `linear()` moved to M5 with springs, which are the only thing that emit it.
 - `pnpm parity`: for fixed times, compare WAAPI preview, CSS export rendered in `<img>`, and sampler output. Threshold-based pixel diff.
 - Reduced-motion handling in every SVG, CSS and JS export.
-- Sanitiser export profile (allows the generated `<style>`), reviewed by the security-reviewer subagent.
+- Every SVG export re-checked by the sanitiser, reviewed by the security-reviewer subagent. Built as the upload rules plus a text check on our `<style>`, not a separate profile (ARCHITECTURE section 2).
 
 Done when: parity passes for all v1 effects in Chromium and WebKit, and an exported SVG dropped into a plain HTML page in Mac Safari matches the editor.
+
+Measured: parity passes for Spin, Fade and Draw in eight scenarios in both engines. Worst diff 0.002% of pixels, tolerance 0.05%. Under emulation, `prefers-reduced-motion` does not reach an SVG in `<img>` in either engine; inline exports do stop.
 
 ## M5. Effects catalogue and controls polish
 
