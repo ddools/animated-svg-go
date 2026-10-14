@@ -30,7 +30,8 @@ Order matters: nothing but our own rewrite touches the markup after it is saniti
 3. **Sanitise.** Main thread. See section 2. Editor layer names (`inkscape:label`, `serif:id`, `sketch:name`) are read inside a sanitiser hook, as plain strings, just before those attributes are stripped.
 4. **Tree caps.** Element count (20,000) and nesting depth (64) again, on the sanitised tree. Plus an expansion cap: at most 200,000 shapes once every `<use>` is followed, so a few hundred nested `<use>` cannot render billions.
 5. **Rewrite.** Main thread, `core/parse/rewrite.ts`. The product's core. In order:
-   - Remove authored `data-k`, `data-anim` and `data-for`. They are ours, and copies could spoof keys and wrappers.
+   - Remove authored `data-k`, `data-anim`, `data-for` and `data-asg`. They are ours, and copies could spoof keys, wrappers and export scopes.
+   - Remove `style`, `class`, `overflow`, `transform`, `transform-origin` and `filter` from the root. On the root they act on the host page's box, not the drawing: pasted inline, a file could cover the page (M4 security review). SVGO has already moved presentation styles and classes to attributes, so those cost nothing. A root `transform` or `filter` does change how a file looks, but SVG 1.1 ignored root transforms and tools rarely write either. A deny-list for now; an allow-list would hold up better as browsers map more SVG 2 attributes to CSS.
    - Guarantee a `viewBox`. Derive from `width`/`height` if missing, converting `mm`, `pt`, `in`, `cm`, `pc` to user units. With no usable size, use `0 0 300 150` (what browsers assume) and warn `no-size`. Remove fixed `width`/`height` on the root.
    - Stamp `data-k` on every animatable element. Key = hash(tag + index chain from root), salted on collision. M2 adds a geometry fingerprint (rounded bbox, path command count) for rebinding after re-upload.
    - Read layer names into a `data-k -> name` map. Preference: editor label, `data-name`, child `<title>`, `aria-label`, `id`. They are data, never markup.
@@ -74,7 +75,7 @@ The code is `src/core/parse/sanitise.ts`. It is the source of truth; this sectio
 Tests: `tests/security/`. Each payload is normalised, checked structurally (as XML and again as HTML), then loaded with no sandbox and no CSP, inline in HTML and as a standalone SVG document. Links get a real click. Any dialog or network request fails. Control tests prove the trap fires on raw script, handler, `javascript:` link, image and CSS `url()` payloads.
 
 Notes:
-- Any change to `sanitise.ts` needs the security-reviewer subagent. It reviews again in M4 (export profile) and M7.
+- Any change to `sanitise.ts` needs the security-reviewer subagent. It reviewed the export path in M4 and reviews again in M7.
 - Watch https://github.com/cure53/DOMPurify/security/advisories before bumping the pin (3.4.0 and 3.4.1 shipped security fixes in April 2026).
 
 ### Layer 2: inert sandbox
@@ -104,8 +105,8 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 - The app page has a strict CSP (Astro 7 `security.csp`): `default-src 'none'`, hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`. One deliberate allowance: `style-src-attr 'unsafe-inline'`. Chromium reports a violation the moment it parses any style attribute, even in an inert `DOMParser` or DOMPurify document, and uploaded SVGs carry them. `<style>` elements and stylesheets are still restricted.
 - Values read back from the sandbox (labels, computed fill and stroke) are data. In the app, put them in the DOM as text or through the CSSOM, never by building a `style="…"` or HTML string.
 - Generated exports embed user-derived strings only via `JSON.stringify` (with `<` escaped) or XML escaping. `css.ts` refuses any key that is not `k` plus hex, and any value or easing outside a small character set or with a CSS function other than `translate`, `rotate`, `scale`, `cubic-bezier` and `steps`. It refuses rather than escapes: every value is generated, but the spec behind it comes from storage.
-- Every SVG export goes through the sanitiser as a final check, with the export profile (`sanitise(svg, 'export')`): same hooks and config, but `style` is not forbidden, because the only `<style>` is the one `css.ts` generated. The export is refused if there is more than one `<style>`, if its text contains `<`, or if it fails the same `url()` and CSS-loader check as attributes. `exportMarkup()` then checks the style came through unchanged, so a stripped animation fails loudly instead of shipping. The upload profile would strip the keyframes.
-- Tests: every payload that normalises is exported with a spin and a draw, checked structurally and detonated as SVG and as the JS snippet. A separate test proves the check refuses remote, `@import`, escaped and breakout styles and a second `<style>`.
+- Every SVG export goes through `sanitise()` as a final check, with the same rules as uploads, so no `<style>` survives it. Our own style is checked as text by `exportStyleIsSafe()` (no `<`, `>` or `&`, and the same `url()` and CSS-loader check as attributes), then added after the root's start tag as a string. It is never parsed into a DOM on the main thread, because Chromium reports a CSP violation for any `<style>` it parses there, inert document or not. A malformed file, an unexpected root or an unsafe style refuses the export.
+- Tests: every payload that normalises is exported, with a spin and a draw if it has anything to animate, checked structurally and detonated as SVG and as the JS snippet. A separate test proves the check refuses remote, `@import`, escaped, entity and breakout styles and malformed files, and strips an authored `<style>`.
 
 ## 3. Spec and IR
 
@@ -141,7 +142,7 @@ type Easing =
   | { kind: 'steps'; n: number; pos: 'start' | 'end' };
 ```
 
-Arriving later, each with a default so saved specs stay valid: `spring` easing (M5, compiled to `linear()` stops), `seed` (M5), `reducedMotion` (M4), per-target delay (M5, with stagger).
+Arriving later, each with a default so saved specs stay valid: `spring` easing (M5, compiled to `linear()` stops), `seed` (M5), `reducedMotion` (when there is a second behaviour to choose; exports stop all motion until then), per-target delay (M5, with stagger).
 
 Each effect lives in `core/spec/effects/<type>.ts` and exports a params schema (with defaults) and a module `{ type, label, params, ui, transform, compile }`. `ui` describes controls (label, min, max, step, unit) so the editor generates panels from data. `transform` says whether it has a pivot. `compile(effect, inventory)` describes **one run** per target, offsets 0 to 1. Timing is the shared compiler's job, never the effect's.
 
@@ -168,7 +169,7 @@ Rules:
 - **Every track spans the whole timeline.** `compile` places each effect's runs at `start + i × duration`, holds the first value from 0 and the last to the end, and puts easing on keyframes. Backends play every track with the same timing: the timeline's duration, 1 or infinite iterations, linear, `fill: both`. CSS can't loop a sequence (draw, then fade, then again) any other way, and one shared clock makes scrub, export and the sampler agree by construction.
 - **Whole runs only.** Runs that don't fit before the end are dropped. One run that doesn't fit is shortened to fit. Both get a note. Cutting a run part-way would need easing maths in compile and can't cut `steps()` exactly.
 - **Reversed runs mirror their easing**, as CSS `reverse` and `alternate` do: `cubic-bezier(x1,y1,x2,y2)` becomes `(1-x2,1-y2,1-x1,1-y1)`; `steps(n,start)` becomes `steps(n,end)`.
-- **Two keyframes at one offset are a jump.** WAAPI takes that as written. CSS merges duplicate percentages, so the CSS backend (M4) must nudge the second one.
+- **Two keyframes at one offset are a jump.** WAAPI takes that as written. CSS merges duplicate percentages, so `css.ts` pulls the earlier one back 0.001% (or pushes the later one forward at 0%). At the exact instant CSS then shows the later value, as WAAPI and the sampler do.
 - **Effects on the same target and property merge**, holding the last value between them: fade in, then fade out later, is one track. Where two overlap in time, the later effect in the list wins and the other is dropped for that target, with a note. Composing two at once (spin plus pop) is an M5 decision. `animation-composition: add` is the likely route; check it in SVG-as-image first.
 - `transform` and `opacity` tracks apply to the wrapper (`[data-for="k"]`). The rest apply to the element itself (`[data-k="k"]`). After style inlining the element carries its own presentation attributes, and those beat anything inherited from the wrapper. CSS and WAAPI override presentation attributes without writing to them. An element with no wrapper (a `<switch>` child) can't take wrapper tracks; `compile` drops them with a note.
 - Paint and dash effects on a `g` target compile to one track per descendant shape, each with its own length.
@@ -179,9 +180,11 @@ Rules:
 ### Backends
 
 - `waapi.ts`: `element.animate()` inside the sandbox. One clock animation with no keyframes on the root `<svg>` is the time source, so play and scrub work with no effects. `apply(ir)` diffs tracks by target and property: `setKeyframes()` and `updateTiming()` for existing ones, `animate()` (synced to the clock) for new ones, `cancel()` for removed ones. The editor calls it at most once per animation frame, which is the slider throttle. Scrub pauses nothing; it sets `currentTime` on all.
-- `css.ts` (M4): `<style>` block inside the SVG with `@keyframes`, per-wrapper rules, and the reduced-motion media query.
-- `snippet.ts` (M4): inline SVG + CSS, or inline SVG + a tiny WAAPI script with JSON keyframes and a `matchMedia('(prefers-reduced-motion: reduce)')` check.
-- `sampler.ts` (M4): `evaluate(ir, t)` returns static values per wrapper. Used by raster export and the parity test.
+- `css.ts`: one `@keyframes` per track, percentages to four decimals, easing per keyframe. Each wrapper or element gets one comma-listed `animation` with the timeline's duration, `linear`, 1 or `infinite`, `both`. The play rules sit inside `@media (prefers-reduced-motion: no-preference)`, so under reduced motion nothing plays and the drawing shows as authored. `exportMarkup()` puts the result in the file (section 5).
+- **Scope.** Inline SVG styles are global to the page, and `data-k` is a hash of structure only, so two inlined drawings could match each other's rules. Every export stamps `data-asg="s<hash>"` on the root, and every selector (`[data-asg=S] [data-for=K]`) and keyframe name (`S-0`) carries it. The hash covers the normalised file and the IR, so two animations of one file never share names.
+- `snippet.ts`: inline SVG + CSS, or inline SVG + a small WAAPI script with the tracks as JSON and a `matchMedia('(prefers-reduced-motion: reduce)')` check.
+- `ir/evaluate.ts`: `evaluate(ir, t)` returns every track's value at t, the way browsers compute it. `cubic-bezier()` is solved by Newton then bisection, `steps()` follows CSS Easing 1, keyframe intervals are chosen as Web Animations chooses them, and value strings are interpolated number by number. `linear()` arrives with springs in M5.
+- `sampler.ts`: `frameCss(ir, t, scope)` writes those values as static `!important` rules on the export's selectors. Raster export (M6) and the parity test render frames from it.
 
 ### Editor state
 
@@ -213,16 +216,28 @@ Each effect carries an `exports` badge: all v1 effects must be `css`. Morph and 
 | Format | v1 | Implementation | Gotchas |
 | --- | --- | --- | --- |
 | Animated SVG (CSS) | Yes | `css.ts` | Works inline and in `<img>` |
-| Inline SVG + CSS snippet | Yes | `snippet.ts` | User must keep namespaced IDs and classes |
-| JS snippet (WAAPI) | Yes | `snippet.ts` | Inline SVG only. Optional pause button (WCAG 2.2.2) |
+| Inline SVG + CSS snippet | Yes | `snippet.ts` | User must keep the `data-*` attributes and namespaced IDs. Downloads as `.html` |
+| JS snippet (WAAPI) | Yes | `snippet.ts` | Inline SVG only. Downloads as `.html`. Pause button (WCAG 2.2.2) deferred to M7 |
 | MP4 | Yes | Sampler -> canvas -> Mediabunny (MPL-2.0) on WebCodecs | Safari 26+ only. Feature-detect `VideoEncoder` + `isConfigSupported()`. H.264 default. Fall back to GIF |
 | GIF | Yes | Sampler -> canvas -> gifenc | 256 colours, banding, 1-bit alpha, big files. Show estimated size |
 | SMIL (morph, motion path) | v1.1 | `smil.ts` | |
 | Lottie | No | | No filters, limited masks, no CSS. A second renderer's worth of work |
 
+### SVG exports
+
+`exportMarkup(svg, scope, style?)` in `css.ts`: XML-parse the normalised file, stamp `data-asg`, put `width` and `height` back from the viewBox (normalise removed them, and without them an `<img>` falls back to 300 × 150), serialise, run it through `sanitise()`, then check the style text and splice it in after the root's start tag (section 2). Exports keep every wrapper and `data-k`; stripping the unused ones is a size win for M7.
+
+Exports are made on demand when the user copies or downloads, not on every edit: the export check re-sanitises the whole file.
+
+### Parity
+
+`pnpm parity` (`tests/parity/`, Chromium and WebKit, also in CI). For eight scenarios at four fixed times, it renders three frames in one 512 × 384 box and pixel-diffs them: the editor's WAAPI preview after a seek; the animated SVG export in `<img>`, frozen at t by an injected `animation-play-state: paused; animation-delay: -t`; and the sampler's static frame in `<img>`. Times avoid jumps, run ends and half turns. It also checks that `prefers-reduced-motion` reaches an SVG in `<img>`, with a control.
+
+Measured in M4, headless on an M-series Mac: every scenario passes in both engines. The worst diff was 0.002% of pixels (Chromium, preview against CSS export). WebKit and the sampler matched to the pixel. Tolerance is 0.05%; a control test shows a frame 50 ms out fails it by more than ten times.
+
 ### Raster frame loop
 
-For each frame t: `evaluate(ir, t)` -> apply to a detached clone -> `XMLSerializer` -> Blob URL -> `new Image()` -> `await img.decode()` -> `ctx.drawImage`. Yield between frames (`scheduler.yield()` or `setTimeout(0)`) so the UI stays responsive. Assume SVG decoding needs the main thread on Safari.
+For each frame t: the export with `frameCss(ir, t, scope)` as its style -> Blob URL -> `new Image()` -> `await img.decode()` -> `ctx.drawImage`. Yield between frames (`scheduler.yield()` or `setTimeout(0)`) so the UI stays responsive. Assume SVG decoding needs the main thread on Safari. Running the export check on every frame is too slow at the caps, so M6 needs a cheaper path for frames, which never leave the browser.
 
 Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`, or warn that text will fall back.
 
@@ -236,7 +251,8 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 - **Unverified:** how `vector-effect: non-scaling-stroke` changes the units of dash values in each engine.
 - **Accessibility:** reduced-motion fallback in every SVG, CSS and JS export (GIF and MP4 can't have one); keep `<title>`; add `role="img"` and `aria-label`; layer tree is the keyboard alternative to canvas picking; editor autoplay pauses under reduced motion.
 - **Targets:** desktop Chrome, Firefox and Safari on Mac. Mobile is not a v1 target. If it becomes one, measure iOS Low Power Mode rAF throttling (~30 fps) and the iOS canvas area cap (~16.7 MP) on a real device first. Both figures are unverified.
-- **Unverified, measure in each browser:** `prefers-reduced-motion` inside SVG-as-image in every engine, Safari `linear()` support since 17.2.
+- **Reduced motion in `<img>`:** measured in M4 under Playwright emulation, neither Chromium nor WebKit passes `prefers-reduced-motion` into an SVG shown as an image. It always matches `no-preference`, so an exported SVG in `<img>` keeps moving. Inline exports and the JS snippet do stop. Whether the real macOS setting reaches SVG-as-image is unverified: Der checks in Safari and Chrome. If it doesn't, the fix is on the host page (`<picture>` with a `prefers-reduced-motion` source), and the export panel could say so.
+- **Unverified, measure in each browser:** Safari `linear()` support since 17.2.
 
 ## 7. Approved dependencies
 
@@ -292,4 +308,11 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: No Immer. Undo keeps whole spec snapshots made with `structuredClone`. Immer stays approved if specs grow.
 - 2026-10-14: Autosave stores the original file text, not normalised markup, and restore re-runs the pipeline. Offered, never automatic.
 - 2026-10-14: Draw in M3 covers stroked shapes. Fill-only shapes wait for M5.
+- 2026-10-14: M4 exports are scoped by `data-asg="s<hash>"` on the root, because inline SVG styles are global to the page.
+- 2026-10-14: Reduced motion in exports stops all motion and shows the drawing as authored. No spec field until there is a second behaviour.
+- 2026-10-14: Exports put `width` and `height` back from the viewBox.
+- 2026-10-14: `linear()` in the sampler moves to M5, with the spring easing that is the only thing that emits it.
+- 2026-10-14: Parity runs in CI, Chromium and WebKit.
+- 2026-10-14: No export sanitiser profile. Exports go through the upload rules, and our `<style>` is checked as text and added after, because parsing it logs a CSP violation in Chromium. Supersedes the 2026-10-13 export profile decision.
+- 2026-10-14: Security review of M4. Nothing critical or high. Fixed: root `style`, `class`, `overflow`, `transform`, `transform-origin` and `filter` let an inline paste cover the host page (medium, found across two passes); unchecked property and duration; authored `<style>` passed when no style was given; `data-asg` not reserved; the export test skipped the mXSS payloads.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.

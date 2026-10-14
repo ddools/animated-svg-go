@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M3 built. Select shapes, add Spin, Fade or Draw, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. The last file and its effects autosave. No export yet (M4). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M4 built. Select shapes, add Spin, Fade or Draw, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Copy or download an animated SVG, an SVG + CSS snippet or an SVG + JS snippet. `pnpm parity` proves preview, export and sampler agree. The last file and its effects autosave. No GIF or MP4 yet (M6). Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
@@ -39,12 +39,12 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile), `src/core/backends/waapi.ts`, `src/workers/`, and all four `tests/` folders. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
   pages/                    Astro pages (landing, editor, about)
-  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts
+  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Export, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
     parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts, inventory.ts
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
@@ -57,6 +57,7 @@ tests/
   e2e/                      Playwright: chromium, firefox, webkit projects
   corpus/                   Real-world SVGs, LICENCES.md, known-failures.json, the pixel-diff harness
   security/                 XSS payloads and the spec that detonates pipeline output unsandboxed
+  parity/                   pnpm parity: preview against CSS export against sampler
 docs/                       ARCHITECTURE.md, ROADMAP.md, MODELS.md
 .claude/agents/             Project subagents (see docs/MODELS.md)
 ```
@@ -69,7 +70,7 @@ pnpm build          Production build
 pnpm test           Vitest unit tests
 pnpm test:e2e       Playwright, all three engines
 pnpm corpus         Normalise every file in tests/corpus, pixel-diff before against after (Chromium, WebKit)
-pnpm parity         (stub until M4) Compare WAAPI preview, CSS-in-<img> export and sampler frames
+pnpm parity         Compare WAAPI preview, CSS-in-<img> export and sampler frames (Chromium, WebKit)
 pnpm lint           ESLint + svelte-check + tsc --noEmit
 ```
 
@@ -98,7 +99,8 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - Code in `core/parse` that touches the DOM can't be unit tested in Vitest (no DOM, on purpose). Test it in the browser through `tests/helpers/pipeline.ts`, which calls the real pipeline via a hook that only exists in `PUBLIC_E2E` builds.
 - The sanitiser parses as HTML. An unknown element inside `<svg>` can close it and drop the drawing. `optimise.ts` removes non-SVG elements first for this reason.
 - DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
-- Chromium logs a CSP violation as soon as it parses a `<style>` element or (without our `style-src-attr` allowance) a style attribute, even in an inert document. If CSP errors appear in the console, look for markup being parsed on the main thread.
+- Chromium logs a CSP violation as soon as it parses a `<style>` element or (without our `style-src-attr` allowance) a style attribute, even in an inert document. If CSP errors appear in the console, look for markup being parsed on the main thread. This is why an export's own `<style>` is checked as text and spliced in, never sanitised as markup.
+- An SVG in `<img>` does not see `prefers-reduced-motion` (both engines, under Playwright emulation). Test reduced motion on inline exports. Real macOS behaviour is unverified.
 - The Svelte island hydrates after page load. In tests, wait for `window.__asg` before dispatching events the app listens for.
 - Big collections in editor state (inventory, selection keys) are held in `$state.raw` and replaced, never mutated. Deep reactivity over 20,000 nodes is slower than the pipeline. The `svelte/prefer-svelte-reactivity` lint rule is off for this reason.
 - A `dist/` built by the test suite contains the `window.__asg` test hook. Never deploy a prebuilt `dist/`. Vercel builds its own from source.
