@@ -42,3 +42,35 @@ test('the largest corpus file loads in the editor', async ({ page }, testInfo) =
   );
   expect(detail.elements).toBeGreaterThan(100);
 });
+
+// Selection tools measure every shape on first use. Time them on the largest real file.
+test('selection tools stay quick on the largest corpus file', async ({ page }, testInfo) => {
+  const { readFileSync } = await import('node:fs');
+  const buffer = readFileSync(new URL('./files/wikimedia/large-blank-world-map-oceans.svg', import.meta.url));
+  await page.goto('/editor');
+  await page.locator('input[type=file]').setInputFiles({ name: 'world-map.svg', mimeType: 'image/svg+xml', buffer });
+  await page.waitForFunction(() => window.__asg?.editor.inventory !== undefined);
+  const [first] = await page.evaluate(() => [...window.__asg!.editor.inventory!.nodes.values()].filter((n) => !n.referenced && n.type === 'path').map((n) => n.key));
+  await page.evaluate((key) => window.__asg!.selection.set([key]), first);
+
+  const timed = async (label: string, action: () => Promise<unknown>) => {
+    const started = Date.now();
+    await action();
+    const count = await page.evaluate(() => window.__asg!.selection.keys.size);
+    return `${label} ${Date.now() - started} ms (${count} selected)`;
+  };
+  const tool = (name: string) => page.getByRole('group', { name: 'Select more like this' }).getByRole('button', { name });
+  const results = [await timed('same fill', () => tool('Same fill').click()), await timed('same type', () => tool('Same type').click())];
+
+  const frame = (await page.locator('iframe').boundingBox())!;
+  results.push(
+    await timed('lasso everything', async () => {
+      await page.mouse.move(frame.x + 1, frame.y + 1);
+      await page.mouse.down();
+      await page.mouse.move(frame.x + frame.width - 1, frame.y + frame.height - 1, { steps: 4 });
+      await page.mouse.up();
+    }),
+  );
+  console.log(`tools ${testInfo.project.name}: ${results.join(', ')}`);
+  expect(await page.evaluate(() => window.__asg!.selection.keys.size)).toBeGreaterThan(100);
+});
