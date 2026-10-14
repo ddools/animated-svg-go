@@ -34,26 +34,51 @@ const dropForeignElements: CustomPlugin = {
   },
 };
 
-// Not preset-default: nothing here may merge paths, collapse groups, rename IDs,
-// round numbers or drop editor labels. The rewrite pass depends on the structure.
-const config: Config = {
-  multipass: false,
-  plugins: [
-    dropForeignElements,
-    'removeDoctype',
-    'removeXMLProcInst',
-    'removeComments',
-    'removeMetadata',
-    // Class-based fills must survive the sanitiser dropping <style>.
-    { name: 'inlineStyles', params: { onlyMatchedOnce: false, removeMatchedSelectors: true } },
-    'convertStyleToAttrs',
-  ],
+export type Optimised = {
+  svg: string;
+  /** CSS that could not be inlined (media queries, keyframes, @font-face) was thrown away. */
+  styleDropped: boolean;
 };
 
 /** String in, string out. No DOM, so it runs in a worker. Throws on malformed XML. */
-export function optimise(svg: string): string {
+export function optimise(svg: string): Optimised {
+  let styleDropped = false;
+
+  // Whatever inlineStyles could not move onto elements goes here, not in the sanitiser.
+  // A <style> element reaching the main thread is reported as a CSP violation the moment it is parsed.
+  const dropLeftoverStyles: CustomPlugin = {
+    name: 'dropLeftoverStyles',
+    fn: () => ({
+      element: {
+        enter: (node, parent) => {
+          // Any case: the sanitiser's HTML parser lowercases tag names.
+          if (node.name.toLowerCase() !== 'style') return;
+          styleDropped = true;
+          parent.children = parent.children.filter((child) => child !== node);
+        },
+      },
+    }),
+  };
+
+  // Not preset-default: nothing here may merge paths, collapse groups, rename IDs,
+  // round numbers or drop editor labels. The rewrite pass depends on the structure.
+  const config: Config = {
+    multipass: false,
+    plugins: [
+      dropForeignElements,
+      'removeDoctype',
+      'removeXMLProcInst',
+      'removeComments',
+      'removeMetadata',
+      // Class-based fills must survive the <style> element being dropped.
+      { name: 'inlineStyles', params: { onlyMatchedOnce: false, removeMatchedSelectors: true } },
+      'convertStyleToAttrs',
+      dropLeftoverStyles,
+    ],
+  };
+
   try {
-    return optimize(svg, config).data;
+    return { svg: optimize(svg, config).data, styleDropped };
   } catch (error) {
     if (error instanceof PipelineError) throw error;
     throw new PipelineError('not-svg', error instanceof Error ? error.message : String(error));

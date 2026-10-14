@@ -1,5 +1,6 @@
 import { fnv1a } from './hash';
 import { LIMITS, PipelineError } from './limits';
+import type { Optimised } from './optimise';
 import { rewrite, type Warning } from './rewrite';
 import { sanitise } from './sanitise';
 
@@ -80,7 +81,7 @@ function expandedSize(root: Element): number {
  */
 export async function normalise(
   raw: string,
-  deps: { optimise: (svg: string) => Promise<string> },
+  deps: { optimise: (svg: string) => Promise<Optimised> },
 ): Promise<Normalised> {
   const bytes = new TextEncoder().encode(raw).length;
   if (bytes > LIMITS.bytes) throw new PipelineError('too-large', `${bytes} bytes. The limit is ${LIMITS.bytes}.`);
@@ -88,7 +89,7 @@ export async function normalise(
   const t0 = performance.now();
   const optimised = await deps.optimise(raw);
   const t1 = performance.now();
-  const { root, editorLabels } = sanitise(optimised);
+  const { root, editorLabels } = sanitise(optimised.svg);
   enforceTreeLimits(root);
   const t2 = performance.now();
   const { labels, warnings } = rewrite(root, editorLabels, `a${fnv1a(raw)}-`);
@@ -98,8 +99,7 @@ export async function normalise(
   return {
     svg,
     labels,
-    // Whatever SVGO could not inline (media queries, keyframes) went with the <style> element.
-    warnings: /<style[\s>]/i.test(optimised) ? [...warnings, 'style-dropped'] : warnings,
+    warnings: optimised.styleDropped ? [...warnings, 'style-dropped'] : warnings,
     timings: { optimise: t1 - t0, sanitise: t2 - t1, rewrite: t3 - t2 },
   };
 }

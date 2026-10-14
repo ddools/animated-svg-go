@@ -20,3 +20,25 @@ test('a file at the caps is processed', async ({ page }, testInfo) => {
   );
   expect(out.svg.match(/data-anim/g)).toHaveLength(19_900);
 });
+
+// M2's acceptance test: the largest real file in the corpus, from choosing it to seeing it.
+test('the largest corpus file loads in the editor', async ({ page }, testInfo) => {
+  const { readFileSync } = await import('node:fs');
+  const path = new URL('./files/wikimedia/large-blank-world-map-oceans.svg', import.meta.url);
+  const buffer = readFileSync(path);
+  await page.goto('/editor');
+  await page.waitForFunction(() => window.__asg !== undefined);
+  const started = Date.now();
+  await page.locator('input[type=file]').setInputFiles({ name: 'world-map.svg', mimeType: 'image/svg+xml', buffer });
+  await page.waitForFunction(() => window.__asg?.editor.inventory !== undefined, undefined, { polling: 20 });
+  const total = Date.now() - started;
+  const detail = await page.evaluate(() => {
+    const { result, inventory } = window.__asg!.editor;
+    return { ...result!.timings, elements: inventory!.nodes.size };
+  });
+  console.log(
+    `load ${testInfo.project.name}: ${(buffer.length / 1048576).toFixed(2)} MB, ${detail.elements} elements, ${total} ms from file chosen to rendered ` +
+      `(optimise ${Math.round(detail.optimise)}, sanitise ${Math.round(detail.sanitise)}, rewrite ${Math.round(detail.rewrite)})`,
+  );
+  expect(detail.elements).toBeGreaterThan(100);
+});

@@ -32,10 +32,10 @@ Done when: 95%+ of the corpus renders identically before and after, every failur
 
 ## M2. Sandbox render and inventory
 
-Lead: Sonnet 5.5. Opus reviews the sandbox code.
+Lead: Opus 5.5 (the main session). `security-reviewer` on the sandbox. Delivered as two PRs: A is sandbox, inventory and loading; B is the tree, picking, selection and size panel.
 
-- Sandbox iframe with deny-all CSP. Parent-side bridge to `contentDocument`.
-- Inventory per wrapper (bbox, length, type, flags).
+- Sandbox iframe with deny-all CSP, filled by DOM import. Parent-side bridge to `contentDocument`.
+- Inventory per element: structure up front, bbox, length and paint on demand.
 - UI: drop zone, file picker, paste-from-clipboard. Layer tree with harvested names. Canvas hover and click picking. Select by colour, by type, siblings, lasso.
 - Size and warnings panel, SVGOMG-style.
 
@@ -103,6 +103,6 @@ Done when: Der signs off on a pass through Chrome, Firefox and Safari on his Mac
 | v1.1 path morph + SMIL backend | Fable 5.1 for the subpath-matching algorithm, Opus 5.5 to integrate | Pair subpaths by area, collapse extras to centroids. anime.js `morphTo` as a baseline to beat |
 | v1.1 motion path | Opus 5.5 | SMIL `<animateMotion>` |
 | Share links | Opus 5.5 | Vercel Blob, separate origin, server re-sanitise (ARCHITECTURE section 2, layer 3) |
-| Re-upload rebinding | Sonnet 5.5 | Uses `data-k` fingerprints |
+| Re-upload rebinding | Sonnet 5.5 | Needs the `data-k` geometry fingerprint (rounded bbox, path command count), which is not built yet |
 | Mobile and touch support | Sonnet 5.5 | Not a v1 target. Needs iOS canvas and memory limits measured on a real device first |
 | Lottie | Not planned | Revisit only with real demand, and only for a transform/opacity/trim-path subset |
