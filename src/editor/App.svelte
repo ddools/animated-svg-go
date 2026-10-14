@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Bars from './Bars.svelte';
   import DropZone from './DropZone.svelte';
   import LayerTree from './LayerTree.svelte';
   import Overlay from './Overlay.svelte';
@@ -35,8 +36,38 @@
     if (editor.status === 'ready') project.save();
   });
 
+  const FRAME = 1 / 30;
+
+  /** Space, arrows, Home and End drive the playhead. Not while typing, choosing, or on a button or slider that uses the key. */
+  function transport(event: KeyboardEvent) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target as HTMLElement;
+    const type = (target as HTMLInputElement).type;
+    if (target.localName === 'select' || target.localName === 'textarea' || target.isContentEditable) return;
+    if (target.localName === 'input' && !['checkbox', 'button', 'range'].includes(type)) return;
+    // A focused range slider keeps its own arrows, Home and End.
+    if (type === 'range' && event.key !== ' ') return;
+    // Space presses a focused button and ticks a focused checkbox. Sliders in the page keep their arrows.
+    if (event.key === ' ' && (target.localName === 'button' || type === 'checkbox')) return;
+    if (target.getAttribute('role') === 'slider' && event.key !== ' ') return;
+    const step = event.shiftKey ? 1 : FRAME;
+    const to = {
+      ' ': null,
+      ArrowLeft: playback.time - step,
+      ArrowRight: playback.time + step,
+      Home: 0,
+      End: project.spec.duration,
+    }[event.key];
+    if (to === undefined) return;
+    event.preventDefault();
+    if (to === null) return void (playback.playing ? playback.pause() : playback.play());
+    playback.pause();
+    playback.seek(Math.min(project.spec.duration, Math.max(0, to)));
+  }
+
   function keydown(event: KeyboardEvent) {
-    if (editor.status !== 'ready' || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return;
+    if (editor.status !== 'ready') return;
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return transport(event);
     // Text and number fields keep their own undo.
     const field = event.target as HTMLInputElement;
     if (field.localName === 'input' && !['range', 'checkbox'].includes(field.type)) return;
@@ -90,6 +121,7 @@
             </div>
           </div>
           <Timeline />
+          <Bars />
         </div>
         <aside class="border-base-300 min-h-0 overflow-y-auto border-l">
           {#if editor.inventory}<Panel />{/if}
