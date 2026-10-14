@@ -11,6 +11,8 @@ const key = z.string().min(1).max(64);
 export const EasingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('cubic'), p: z.tuple([unit, z.number().min(-5).max(5), unit, z.number().min(-5).max(5)]) }),
   z.object({ kind: z.literal('steps'), n: z.int().min(1).max(100), pos: z.enum(['start', 'end']) }),
+  /** Settles within the run. 0 is no overshoot; higher bounces more. Compiles to linear() stops. */
+  z.object({ kind: z.literal('spring'), bounce: z.number().min(0).max(0.9) }),
 ]);
 
 export const TimingSchema = z.object({

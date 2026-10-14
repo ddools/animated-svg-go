@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { compile, easingCss, planRuns } from '../../src/core/ir/compile';
+import { compile, easingCss, planRuns, springPoints } from '../../src/core/ir/compile';
+import { ease } from '../../src/core/ir/evaluate';
 import type { InventoryView } from '../../src/core/ir/types';
 import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
 import { newEffect, newSpec, type Easing, type Effect, type Spec, type Timing } from '../../src/core/spec/schema';
@@ -49,6 +50,28 @@ describe('easingCss', () => {
   it('mirrors for a reversed run, as CSS does', () => {
     expect(easingCss({ kind: 'cubic', p: [0.1, 0.2, 0.3, 0.4] }, true)).toBe('cubic-bezier(0.7, 0.6, 0.9, 0.8)');
     expect(easingCss({ kind: 'steps', n: 3, pos: 'start' }, true)).toBe('steps(3, end)');
+  });
+});
+
+describe('springs', () => {
+  it('run from 0 to 1 within the run, overshooting only when they bounce', () => {
+    for (const bounce of [0, 0.4, 0.9]) {
+      const points = springPoints(bounce);
+      expect(points[0]).toEqual([0, 0]);
+      expect(points.at(-1)).toEqual([1, 1]);
+      expect(points.every(([x], i) => i === 0 || x > points[i - 1][0])).toBe(true);
+      const peak = Math.max(...points.map(([, y]) => y));
+      if (bounce) expect(peak).toBeGreaterThan(1);
+      else expect(peak).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('write linear() stops, mirrored for a reversed run', () => {
+    const forward = easingCss({ kind: 'spring', bounce: 0.4 });
+    const reversed = easingCss({ kind: 'spring', bounce: 0.4 }, true);
+    expect(forward).toMatch(/^linear\(0 0%, .* 1 100%\)$/);
+    expect(reversed).toMatch(/^linear\(0 0%, .* 1 100%\)$/);
+    for (const p of [0.05, 0.2, 0.5, 0.9]) expect(ease(reversed, p)).toBeCloseTo(1 - ease(forward, 1 - p), 2);
   });
 });
 

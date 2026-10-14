@@ -19,8 +19,35 @@ type Timed = { time: number; value: string; easing: string };
 /** One effect's runs on one target and property. */
 type Window = { effect: string; order: number; start: number; end: number; keyframes: Timed[] };
 
+/**
+ * A damped spring from 0 to 1 as [time, value] points across one run, ending exactly at [1, 1].
+ * Damping ratio is 1 - bounce. Stiffness is set so the wobble has decayed to 0.01% by the end of the run,
+ * so a run is the whole spring and nothing is cut off.
+ */
+export function springPoints(bounce: number): [number, number][] {
+  const zeta = 1 - bounce;
+  const omega = Math.log(1e4) / zeta;
+  const damped = omega * Math.sqrt(1 - zeta * zeta);
+  const at = (t: number) =>
+    damped === 0
+      ? 1 - Math.exp(-omega * t) * (1 + omega * t)
+      : 1 - Math.exp(-zeta * omega * t) * (Math.cos(damped * t) + ((zeta * omega) / damped) * Math.sin(damped * t));
+  // At least 12 stops per wobble and 30 per run, until the wobble is under 0.1% of the travel.
+  const step = Math.min(1 / 30, damped ? (2 * Math.PI) / damped / 12 : 1);
+  const points: [number, number][] = [];
+  for (let t = 0; t < 1 && (t === 0 || Math.exp(-zeta * omega * t) >= 1e-3); t += step) points.push([t, at(t)]);
+  points.push([1, 1]);
+  return points;
+}
+
 /** CSS for an easing, mirrored for a reversed run as CSS reverse and alternate do. */
 export function easingCss(easing: Easing, reversed = false): string {
+  if (easing.kind === 'spring') {
+    // Mirrored, a stop at (x, y) moves to (1 - x, 1 - y), and the order reverses.
+    const points = springPoints(easing.bounce).map(([x, y]) => (reversed ? [1 - x, 1 - y] : [x, y]));
+    if (reversed) points.reverse();
+    return `linear(${points.map(([x, y]) => `${num(y)} ${num(x * 100)}%`).join(', ')})`;
+  }
   if (easing.kind === 'steps') {
     const pos = reversed ? (easing.pos === 'start' ? 'end' : 'start') : easing.pos;
     return `steps(${easing.n}, ${pos})`;

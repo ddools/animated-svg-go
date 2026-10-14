@@ -54,6 +54,10 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       { type: 'spin', labels: ['nested'], params: { degrees: -90 }, timing: { start: 0.4, duration: 1 }, pivot: { fx: 0, fy: 0 } },
     ],
   },
+  {
+    name: 'a bouncing spring, there and back',
+    effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 90 }, timing: { iterations: 2, direction: 'alternate', easing: { kind: 'spring', bounce: 0.6 } } }],
+  },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
 

@@ -25,8 +25,14 @@ describe('ease', () => {
     expect([0, 0.24, 0.25, 0.99, 1].map((p) => ease('steps(4, start)', p))).toEqual([0.25, 0.25, 0.5, 1, 1]);
   });
 
+  it('interpolates linear() between stops, as CSS Easing 2 does', () => {
+    const css = 'linear(0 0%, 1.2 50%, 1 100%)';
+    expect([0, 0.25, 0.5, 0.75, 1].map((p) => ease(css, p))).toEqual([0, 0.6, 1.2, 1.1, 1]);
+  });
+
   it('refuses easings the IR does not produce', () => {
     expect(() => ease('ease-in', 0.5)).toThrow();
+    expect(() => ease('linear(0, 1)', 0.5)).toThrow();
   });
 });
 
