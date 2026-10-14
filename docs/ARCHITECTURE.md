@@ -247,7 +247,9 @@ Measured in M4, headless on an M-series Mac: every scenario passes in both engin
 
 For each frame t: the export with `frameCss(ir, t, scope)` as its style -> Blob URL -> `new Image()` -> `await img.decode()` -> `ctx.drawImage`. Yield between frames (`scheduler.yield()` or `setTimeout(0)`) so the UI stays responsive. Assume SVG decoding needs the main thread on Safari. Running the export check on every frame is too slow at the caps, so M6 needs a cheaper path for frames, which never leave the browser.
 
-Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`, or warn that text will fall back.
+Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
+
+Measured in the M6 spike, headless on an M-series Mac, inside the editor page with the CSP live: a sampler frame drawn from a Blob URL `<img>` does not taint the canvas in Chromium or WebKit, even with an embedded `data:` PNG. A draw straight after `decode()` matches a draw 300 ms later, so `decode()` is ready to paint. Text and vectors on the canvas match the frame in `<img>` to the pixel in both engines. A 1920 × 1440 frame costs 7.4 ms in Chromium and 3.7 ms in WebKit before encoding, of which the export check is 1.1 to 1.4 ms on a small file.
 
 ## 6. Platform notes
 
@@ -256,6 +258,7 @@ Fonts: SVG-as-image can't fetch fonts. Embed used fonts as `data:` `@font-face`,
 - **Strokes:** `getBBox()` excludes stroke width. Pad by half `stroke-width`.
 - **`pathLength`:** an authored `pathLength` rescales dash values. Draw uses it as the length instead of `getTotalLength()`, or the dash would be the wrong size.
 - **Half turns:** a centrally symmetric shape turned 180° has the same box. Tests that check a spin by its bounding box must avoid half-turn times.
+- **Embedded rasters on a canvas:** WebKit smooths an upscaled embedded `<image>` more softly when the SVG is drawn on a canvas than when it is shown in `<img>`. Measured on an 8 px checkerboard scaled about 25 times: 0.32% of pixels differ, all inside the image. `imageSmoothingQuality` makes no difference. Chromium matches. Raster parity fixtures avoid upscaled rasters.
 - **Unverified:** how `vector-effect: non-scaling-stroke` changes the units of dash values in each engine.
 - **Accessibility:** reduced-motion fallback in every SVG, CSS and JS export (GIF and MP4 can't have one); keep `<title>`; add `role="img"` and `aria-label`; layer tree is the keyboard alternative to canvas picking; editor autoplay pauses under reduced motion.
 - **Targets:** desktop Chrome, Firefox and Safari on Mac. Mobile is not a v1 target. If it becomes one, measure iOS Low Power Mode rAF throttling (~30 fps) and the iOS canvas area cap (~16.7 MP) on a real device first. Both figures are unverified.
