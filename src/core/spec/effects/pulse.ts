@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { num } from '../../ir/format';
 import type { LocalTrack } from '../../ir/types';
 import type { EffectModule } from '../schema';
+import { around } from './spin';
 
 export const PulseParams = z.object({
   scale: z.number().min(1).max(2).default(1.15),
   fade: z.number().min(0).max(1).default(1),
 });
-export type PulseParams = z.infer<typeof PulseParams>;
 
 const OFFSETS = [0, 0.5, 1];
 
@@ -24,11 +24,10 @@ export const pulse: EffectModule<'pulse'> = {
   timing: { iterations: 'infinite' },
   // No more than three pulses a second (WCAG 2.3.1).
   minDuration: 1 / 3,
-  compile({ targets, params, pivot = { fx: 0.5, fy: 0.5 } }, inventory) {
+  compile({ targets, params, pivot }, inventory) {
     const tracks = targets.flatMap((target): LocalTrack[] => {
-      const box = inventory.measure(target)?.bbox ?? { x: 0, y: 0, width: 0, height: 0 };
-      const [x, y] = [box.x + pivot.fx * box.width, box.y + pivot.fy * box.height];
-      const at = (s: number) => `translate(${num(x)}px, ${num(y)}px) scale(${num(s)}) translate(${num(-x)}px, ${num(-y)}px)`;
+      const about = around(target, pivot, inventory);
+      const at = (s: number) => about(`scale(${num(s)})`);
       const track = (property: LocalTrack['property'], values: string[]): LocalTrack => ({
         target,
         property,

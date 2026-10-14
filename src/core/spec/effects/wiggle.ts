@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { num, random } from '../../ir/format';
 import type { EffectModule } from '../schema';
+import { around } from './spin';
 
 export const WiggleParams = z.object({
   angle: z.number().min(1).max(90).default(10),
@@ -19,19 +20,18 @@ export const wiggle: EffectModule<'wiggle'> = {
     { kind: 'range', key: 'wiggles', label: 'Wiggles', min: 1, max: 20, step: 1, unit: '' },
   ],
   pivot: true,
-  compile({ targets, params, pivot = { fx: 0.5, fy: 0.5 } }, inventory) {
+  compile({ targets, params, pivot }, inventory) {
     const next = random(params.seed);
     // Rest, then alternating swings of 50 to 100% of the angle, then rest.
     const angles = [0, ...Array.from({ length: params.wiggles }, (_, i) => params.angle * (0.5 + 0.5 * next()) * (i % 2 === 0 ? 1 : -1)), 0];
     const tracks = targets.map((target) => {
-      const box = inventory.measure(target)?.bbox ?? { x: 0, y: 0, width: 0, height: 0 };
-      const [x, y] = [box.x + pivot.fx * box.width, box.y + pivot.fy * box.height];
+      const about = around(target, pivot, inventory);
       return {
         target,
         property: 'transform' as const,
         keyframes: angles.map((angle, i) => ({
           offset: i / (angles.length - 1),
-          value: `translate(${num(x)}px, ${num(y)}px) rotate(${num(angle)}deg) translate(${num(-x)}px, ${num(-y)}px)`,
+          value: about(`rotate(${num(angle)}deg)`),
         })),
       };
     });
