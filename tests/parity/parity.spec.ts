@@ -88,6 +88,13 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       { type: 'colour', labels: ['pair'], params: { property: 'stroke', to: '#22aa44' }, timing: { duration: 2 } },
     ],
   },
+  {
+    name: 'float under a spin, alternating',
+    effects: [
+      { type: 'spin', labels: ['nested'], params: { degrees: 120 }, timing: { duration: 2 } },
+      { type: 'float', labels: ['nested'], params: { x: 12, y: -18 }, timing: { duration: 1, iterations: 2, direction: 'alternate' } },
+    ],
+  },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
 

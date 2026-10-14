@@ -7,6 +7,7 @@ import { fade, FadeParams } from './effects/fade';
 import { slide, SlideParams } from './effects/slide';
 import { pop, PopParams } from './effects/pop';
 import { pulse, PulseParams } from './effects/pulse';
+import { float, FloatParams } from './effects/float';
 import { spin, SpinParams } from './effects/spin';
 import { wiggle, WiggleParams } from './effects/wiggle';
 
@@ -60,6 +61,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('pop'), params: PopParams }),
   z.object({ ...base, type: z.literal('pulse'), params: PulseParams }),
   z.object({ ...base, type: z.literal('wiggle'), params: WiggleParams }),
+  z.object({ ...base, type: z.literal('float'), params: FloatParams }),
 ]);
 
 export const SpecSchema = z.object({
@@ -107,7 +109,7 @@ export type EffectModule<T extends EffectType> = {
   compile(effect: Extract<Effect, { type: T }>, inventory: InventoryView): { tracks: LocalTrack[]; notes: LocalNote[] };
 };
 
-export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw, colour, slide, pop, pulse, wiggle };
+export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw, colour, slide, pop, pulse, wiggle, float };
 
 export function newSpec(): Spec {
   return { version: 1, duration: 2, loop: true, effects: [] };
