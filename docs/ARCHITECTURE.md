@@ -134,17 +134,23 @@ type Effect = {
     iterations: number | 'infinite';   // whole runs. 'infinite' repeats until the timeline ends
     direction: 'normal' | 'reverse' | 'alternate';
   };
-  pivot?: { fx: number; fy: number }; // fraction of each target's bbox, default 0.5/0.5. Transform effects only
+  pivot?: { fx: number; fy: number }; // fraction of each target's bbox, default 0.5/0.5. Effects with a pivot only
+  stagger?: {                  // each target starts `gap` seconds after the one before
+    gap: number;
+    order: 'start' | 'end' | 'centre' | 'random' | 'x' | 'y';  // document order, or by position, or shuffled
+    seed: number;              // for 'random'. Shuffle stores a new one
+  };
 };
 
 type Easing =
   | { kind: 'cubic'; p: [number, number, number, number] }
-  | { kind: 'steps'; n: number; pos: 'start' | 'end' };
+  | { kind: 'steps'; n: number; pos: 'start' | 'end' }
+  | { kind: 'spring'; bounce: number };  // 0 to 0.9. Compiled to linear() stops
 ```
 
-Arriving later, each with a default so saved specs stay valid: `spring` easing (M5, compiled to `linear()` stops), `seed` (M5), `reducedMotion` (when there is a second behaviour to choose; exports stop all motion until then), per-target delay (M5, with stagger).
+Arriving later, with a default so saved specs stay valid: `reducedMotion` (when there is a second behaviour to choose; exports stop all motion until then).
 
-Each effect lives in `core/spec/effects/<type>.ts` and exports a params schema (with defaults) and a module `{ type, label, params, ui, transform, compile }`. `ui` describes controls (label, min, max, step, unit) so the editor generates panels from data. `transform` says whether it has a pivot. `compile(effect, inventory)` describes **one run** per target, offsets 0 to 1. Timing is the shared compiler's job, never the effect's.
+Each effect lives in `core/spec/effects/<type>.ts` and exports a params schema (with defaults) and a module `{ type, label, params, ui, pivot, timing?, minDuration?, compile }`. `ui` describes controls (a range with min, max, step and unit; a select; or a colour) so the editor generates panels from data. `pivot` says whether it rotates or scales about a point. `timing` is what a new effect starts with (Float alternates). `minDuration` is the shortest run the schema accepts, for effects that would flash (WCAG 2.3.1). `compile(effect, inventory)` describes **one run** per target, offsets 0 to 1. Timing is the shared compiler's job, never the effect's.
 
 ### IR
 
@@ -160,7 +166,7 @@ type IR = {
 
 type Track = {
   target: string;              // data-k. The property decides wrapper or element, see rules
-  property: 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray';  // fill and stroke join in M5
+  property: 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray' | 'fill' | 'stroke';  // paint as rgb()
   keyframes: { offset: number; value: string; easing: string }[]; // CSS-ready. Easing runs to the next keyframe
 };
 ```
@@ -170,12 +176,14 @@ Rules:
 - **Whole runs only.** Runs that don't fit before the end are dropped. One run that doesn't fit is shortened to fit. Both get a note. Cutting a run part-way would need easing maths in compile and can't cut `steps()` exactly.
 - **Reversed runs mirror their easing**, as CSS `reverse` and `alternate` do: `cubic-bezier(x1,y1,x2,y2)` becomes `(1-x2,1-y2,1-x1,1-y1)`; `steps(n,start)` becomes `steps(n,end)`.
 - **Two keyframes at one offset are a jump.** WAAPI takes that as written. CSS merges duplicate percentages, so `css.ts` pulls the earlier one back 0.001% (or pushes the later one forward at 0%). At the exact instant CSS then shows the later value, as WAAPI and the sampler do.
-- **Effects on the same target and property merge**, holding the last value between them: fade in, then fade out later, is one track. Where two overlap in time, the later effect in the list wins and the other is dropped for that target, with a note. Composing two at once (spin plus pop) is an M5 decision. `animation-composition: add` is the likely route; check it in SVG-as-image first.
+- **Effects on the same target and property merge**, holding the last value between them: fade in, then fade out later, is one track. Where two overlap in time, the later effect in the list wins and the other is dropped for that target, with a note.
+- **Transforms stack instead** (`ADDITIVE_PROPERTIES`). Each effect keeps its own transform track, and a target's tracks compose in list order: WAAPI `composite: 'add'`, CSS `animation-composition` (written only where two stack, so a lone transform exports as before), and the sampler joins the values into one list. The wrapper is ours with no authored transform, so there is nothing underneath. Two spins in sequence now add up (90°, then −90°, ends where it began). Checked in SVG-as-image in Chromium and WebKit before building on it.
+- **Stagger** gives each target its own start, `start + i × gap` in the chosen order, and `compile` plans and compiles each target on its own. Runs stay whole, so the loop seam needs no negative delay. The cost: with "until the end", later targets fit fewer runs and hold sooner. Position orders use each target's box in its parent's space, exact for siblings and approximate across transformed groups.
+- **Springs** compile to `linear()` stops: a damped spring, damping ratio `1 − bounce`, stiff enough that the wobble is under 0.01% by the end of the run, sampled at 12 or more stops per wobble and at least 30 per run, ending exactly at (1, 1). A reversed run mirrors each stop to `(1 − x, 1 − y)`. Bounce 0.4 takes 24 stops; 0.9 takes 133.
 - `transform` and `opacity` tracks apply to the wrapper (`[data-for="k"]`). The rest apply to the element itself (`[data-k="k"]`). After style inlining the element carries its own presentation attributes, and those beat anything inherited from the wrapper. CSS and WAAPI override presentation attributes without writing to them. An element with no wrapper (a `<switch>` child) can't take wrapper tracks; `compile` drops them with a note.
 - Paint and dash effects on a `g` target compile to one track per descendant shape, each with its own length.
 - Every transform keyframe uses the same function list, so CSS interpolates function by function. Pivot is baked in: `translate(ox px, oy px) rotate(a deg) translate(-ox px, -oy px)`, from the wrapper's box.
 - Values are rounded to three decimal places, so the same spec always gives the same strings.
-- Stagger (M5) can no longer just vary `delay` on shared keyframes: on a looping timeline a delay shifts the phase and wraps across the seam. Decide in M5 between per-target keyframes and a negative-delay phase shift.
 
 ### Backends
 
@@ -183,7 +191,7 @@ Rules:
 - `css.ts`: one `@keyframes` per track, percentages to four decimals, easing per keyframe. Each wrapper or element gets one comma-listed `animation` with the timeline's duration, `linear`, 1 or `infinite`, `both`. The play rules sit inside `@media (prefers-reduced-motion: no-preference)`, so under reduced motion nothing plays and the drawing shows as authored. `exportMarkup()` puts the result in the file (section 5).
 - **Scope.** Inline SVG styles are global to the page, and `data-k` is a hash of structure only, so two inlined drawings could match each other's rules. Every export stamps `data-asg="s<hash>"` on the root, and every selector (`[data-asg=S] [data-for=K]`) and keyframe name (`S-0`) carries it. The hash covers the normalised file and the IR, so two animations of one file never share names.
 - `snippet.ts`: inline SVG + CSS, or inline SVG + a small WAAPI script with the tracks as JSON and a `matchMedia('(prefers-reduced-motion: reduce)')` check.
-- `ir/evaluate.ts`: `evaluate(ir, t)` returns every track's value at t, the way browsers compute it. `cubic-bezier()` is solved by Newton then bisection, `steps()` follows CSS Easing 1, keyframe intervals are chosen as Web Animations chooses them, and value strings are interpolated number by number. `linear()` arrives with springs in M5.
+- `ir/evaluate.ts`: `evaluate(ir, t)` returns every track's value at t, the way browsers compute it. `cubic-bezier()` is solved by Newton then bisection, `steps()` follows CSS Easing 1, `linear()` follows CSS Easing 2 for the form compile writes (every stop has an input position), keyframe intervals are chosen as Web Animations chooses them, and value strings are interpolated number by number.
 - `sampler.ts`: `frameCss(ir, t, scope)` writes those values as static `!important` rules on the export's selectors. Raster export (M6) and the parity test render frames from it.
 
 ### Editor state
@@ -200,14 +208,14 @@ Measured: compile plus `apply` for a 200-shape spin takes 1.5 ms in Chromium and
 | --- | --- | --- | --- |
 | Fade | opacity | from, to | |
 | Spin | transform | degrees (one param: 720 is two turns) | Pivot handle |
-| Draw | stroke-dashoffset/dasharray | from %, to % | Dash length from `pathLength` if set, else `getTotalLength()`. Gap is twice the length so no round cap shows at 0 %. Fill-only shapes get a note in M3; the "outline then fill" variant arrives in M5 with Colour shift. Notes authored dashes |
-| Pop | transform | scale, overshoot | Spring easing |
+| Draw | stroke-dashoffset/dasharray | from %, to % | Dash length from `pathLength` if set, else `getTotalLength()`. Gap is twice the length so no round cap shows at 0 %. Fill-only shapes get a note. The "outline then fill" variant needs `fill-opacity` and is not in v1. Notes authored dashes |
+| Pop | transform | scale | Spring easing by default (bounce is the overshoot) |
 | Float | transform | distance x/y | Alternate direction |
 | Wiggle | transform | angle, frequency | Seeded noise baked to keyframes |
 | Pulse | transform, opacity | scale, frequency | Cap at 3 Hz (WCAG 2.3.1) |
 | Slide in | transform, opacity | direction, distance | |
-| Colour shift | fill / stroke | colours (default: colours in file) | Clone shared gradients first |
-| Stagger reveal | wraps another effect | order (start, end, centre, random, by x, by y), gap | Order by position uses inventory bboxes |
+| Colour shift | fill / stroke | colours (default: colours in file) | Solid colours only in v1. Gradient and pattern paint gets a note |
+| Stagger | a setting on any effect | order (start, end, centre, random, by x, by y), gap | Not an effect type. A staggered Fade or Pop is the "reveal" |
 
 Each effect carries an `exports` badge: all v1 effects must be `css`. Morph and motion path (v1.1) will be `smil`.
 
@@ -315,4 +323,8 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Parity runs in CI, Chromium and WebKit.
 - 2026-10-14: No export sanitiser profile. Exports go through the upload rules, and our `<style>` is checked as text and added after, because parsing it logs a CSP violation in Chromium. Supersedes the 2026-10-13 export profile decision.
 - 2026-10-14: Security review of M4. Nothing critical or high. Fixed: root `style`, `class`, `overflow`, `transform`, `transform-origin` and `filter` let an inline paste cover the host page (medium, found across two passes); unchecked property and duration; authored `<style>` passed when no style was given; `data-asg` not reserved; the export test skipped the mXSS payloads.
+- 2026-10-14: M5 contracts. Transforms stack, one track per effect, composed in list order; other properties still merge and resolve overlaps to the later effect. Supersedes the deferral above.
+- 2026-10-14: Spring easing is one setting, `bounce`, sampled to `linear()` stops that settle within the run.
+- 2026-10-14: Stagger is an optional setting on every effect, not an effect type. Each target is planned on its own, not phase-shifted with a negative delay.
+- 2026-10-14: Colour shift animates solid fill and stroke only, as `rgb()`. Gradients are not cloned in v1, so `core/parse` is unchanged.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
