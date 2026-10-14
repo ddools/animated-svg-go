@@ -15,8 +15,8 @@ const ROOT_START = /^(<svg(?:\s+[^\s=>]+="[^"]*")*)\s*(\/?)>/;
 const KEY = /^k[0-9a-f]+$/;
 // Plain spaces only: \v and \f are not legal in XML.
 const VALUE = /^[\w .,()%-]*$/;
-const FUNCTIONS = new Set(['translate(', 'rotate(', 'scale(', 'cubic-bezier(', 'steps(', 'linear(']);
-const PROPERTIES = new Set<string>(['transform', 'opacity', 'stroke-dashoffset', 'stroke-dasharray']);
+const FUNCTIONS = new Set(['translate(', 'rotate(', 'scale(', 'rgb(', 'cubic-bezier(', 'steps(', 'linear(']);
+const PROPERTIES = new Set<string>(['transform', 'opacity', 'stroke-dashoffset', 'stroke-dasharray', 'fill', 'stroke']);
 
 /** Scopes one export: the same file with a different animation never shares names. */
 export const scopeOf = (svg: string, ir: IR): string => `s${fnv1a(svg + JSON.stringify(ir.tracks) + ir.duration + ir.iterations)}`;

@@ -10,7 +10,8 @@ export const WRAPPER_PROPERTIES = new Set<Property>(['transform', 'opacity']);
  */
 export const ADDITIVE_PROPERTIES = new Set<Property>(['transform']);
 
-export type Property = 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray';
+/** Paint values are always rgb(r, g, b), so they interpolate number by number. */
+export type Property = 'transform' | 'opacity' | 'stroke-dashoffset' | 'stroke-dasharray' | 'fill' | 'stroke';
 
 export type Keyframe = {
   /** 0 to 1 across the whole timeline. Non-decreasing; two keyframes at one offset are a jump. */

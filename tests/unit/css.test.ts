@@ -58,6 +58,14 @@ describe('css', () => {
     expect(css(ir([jump]), 's1')).toContain('{0%{opacity:0}0.001%{opacity:1}49.999%{opacity:1}50%{opacity:0}100%{opacity:0}}');
   });
 
+  it('paints fill and stroke on the element, as rgb()', () => {
+    const fill: Track = { target: 'k2b', property: 'fill', keyframes: [{ offset: 0, value: 'rgb(255, 0, 0)', easing: 'linear' }, { offset: 1, value: 'rgb(0, 0, 255)', easing: 'linear' }] };
+    expect(css(ir([fill]), 's1')).toContain('@keyframes s1-0{0%{fill:rgb(255, 0, 0)}100%{fill:rgb(0, 0, 255)}}');
+    expect(selector('s1', { ...fill, property: 'stroke' })).toBe('[data-asg="s1"] [data-k="k2b"]');
+    expect(frameCss(ir([fill]), 1, 's1')).toBe('[data-asg="s1"] [data-k="k2b"]{fill:rgb(127.5, 0, 127.5) !important}');
+    expect(() => css(ir([{ ...fill, keyframes: [{ offset: 0, value: 'url(#g)', easing: 'linear' }] }]), 's1')).toThrow();
+  });
+
   it('refuses keys and values it did not generate', () => {
     expect(() => css(ir([{ ...fade, target: 'k1"]{}' }]), 's1')).toThrow();
     expect(() => css(ir([{ ...fade, keyframes: [{ offset: 0, value: '1}</style>', easing: 'linear' }] }]), 's1')).toThrow();
