@@ -251,6 +251,12 @@ Measured in M4, headless on an M-series Mac: every scenario passes in both engin
 
 Frame times: `frameTimes(duration, fps, loop)` spreads `round(duration × fps)` frames evenly over one pass. A loop leaves out its end (its start again); a timeline that plays once keeps it. Encoders time each frame at `duration / count`, not `1 / fps`.
 
+MP4 (`core/export/video.ts`): Mediabunny `CanvasSource` on the loop's canvas, H.264 at `QUALITY_HIGH`, MP4 with the index first (`fastStart: 'in-memory'`) into a `BufferTarget`. `source.add()` is awaited, so encoder backpressure holds the loop back. `canExportMp4(size)` needs even sides, `VideoEncoder`, and Mediabunny's `canEncodeVideo('avc')`.
+
+GIF (`core/export/gif.ts`): each frame read back with `getImageData`, quantised to its own 256-colour palette, written by gifenc. Delays are rounded from the running total in hundredths, so 30 fps alternates 30 and 40 ms and keeps time. Loops forever when the timeline loops; plays once otherwise. `estimateGif` encodes three frames spread over the pass and scales by the frame count.
+
+Measured headless on an M-series Mac, 200 shapes spinning and fading: a 5 s, 30 fps, 1920 × 1080 MP4 takes 3.7 s in Chromium and 7.1 s in WebKit (2.5 to 3.3 MB). A 5 s, 15 fps, 720 px GIF takes 2.7 to 3.0 s (2.5 MB), quantised on the main thread. The estimate came within 3% of the file; the bar is 25%.
+
 Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
 
 Measured in the M6 spike, headless on an M-series Mac, inside the editor page with the CSP live: a sampler frame drawn from a Blob URL `<img>` does not taint the canvas in Chromium or WebKit, even with an embedded `data:` PNG. A draw straight after `decode()` matches a draw 300 ms later, so `decode()` is ready to paint. Text and vectors on the canvas match the frame in `<img>` to the pixel in both engines. A 1920 × 1440 frame costs 7.4 ms in Chromium and 3.7 ms in WebKit before encoding, of which the export check is 1.1 to 1.4 ms on a small file.
@@ -280,8 +286,8 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 | zod | Spec validation | MIT |
 | immer | Undo/redo patches. Not used: undo keeps snapshots (decision log, 14 Oct) | MIT |
 | idb-keyval | Local project storage | Apache-2.0 |
-| mediabunny | MP4 via WebCodecs | MPL-2.0 |
-| gifenc | GIF encoding | MIT |
+| mediabunny (1.60.0, pinned) | MP4 via WebCodecs | MPL-2.0 |
+| gifenc (1.0.3, pinned; no types, declared in `src/env.d.ts`) | GIF encoding | MIT |
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
 | vitest, @playwright/test, pixelmatch, pngjs, @types/pngjs, @types/node | Testing | MIT / Apache-2.0 / ISC |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
