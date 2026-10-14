@@ -11,14 +11,18 @@ export type InventoryNode = {
   children: string[];
   /** Inside defs, a clip path, mask, pattern, marker or symbol: drawn by reference, not in place. */
   referenced: boolean;
+  /** Has a data-anim wrapper. Children of <switch> and referenced content do not. */
+  wrapped: boolean;
   hasFilter: boolean;
 };
 
 export type Measured = {
   /** In the element's parent coordinate space, padded by half the stroke width (getBBox ignores strokes). */
   bbox: { x: number; y: number; width: number; height: number };
-  /** Outline length, for shapes that can be drawn on. */
+  /** Outline length in dash units, for shapes that can be drawn on. pathLength rescales dashes, so it wins. */
   length?: number;
+  /** Has its own stroke-dasharray. */
+  dashed: boolean;
   fill: string;
   stroke: string;
   strokeWidth: number;
@@ -40,6 +44,11 @@ function attempt<T>(read: () => T): T | undefined {
   }
 }
 
+function lengthOf(element: SVGGeometryElement): number | undefined {
+  const pathLength = parseFloat(element.getAttribute('pathLength') ?? '');
+  return pathLength > 0 ? pathLength : attempt(() => element.getTotalLength());
+}
+
 export function buildInventory(root: SVGSVGElement, labels: Record<string, string>): Inventory {
   const nodes = new Map<string, InventoryNode>();
   const elements = new Map<string, SVGGraphicsElement>();
@@ -56,6 +65,7 @@ export function buildInventory(root: SVGSVGElement, labels: Record<string, strin
       parent,
       children: [],
       referenced: element.closest(REFERENCED) !== null,
+      wrapped: element.parentElement?.hasAttribute('data-anim') ?? false,
       hasFilter: element.hasAttribute('filter') || element.style.filter !== '',
     });
     elements.set(key, element);
@@ -82,7 +92,8 @@ export function buildInventory(root: SVGSVGElement, labels: Record<string, strin
     const pad = strokeWidth / 2;
     const measured: Measured = {
       bbox: { x: box.x - pad, y: box.y - pad, width: box.width + strokeWidth, height: box.height + strokeWidth },
-      length: 'getTotalLength' in element ? attempt(() => (element as unknown as SVGGeometryElement).getTotalLength()) : undefined,
+      length: 'getTotalLength' in element ? lengthOf(element as unknown as SVGGeometryElement) : undefined,
+      dashed: style.strokeDasharray !== 'none' && style.strokeDasharray !== '',
       fill: style.fill,
       stroke,
       strokeWidth,

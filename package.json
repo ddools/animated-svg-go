@@ -38,6 +38,8 @@
   },
   "dependencies": {
     "dompurify": "3.4.17",
-    "svgo": "^4.1.0"
+    "idb-keyval": "6.3.0",
+    "svgo": "^4.1.0",
+    "zod": "4.6.5"
   }
 }

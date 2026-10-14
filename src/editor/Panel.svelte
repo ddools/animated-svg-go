@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selectParents, selectSamePaint, selectSameType, selectSiblings, selection } from './selection.svelte';
   import { editor } from './state.svelte';
+  import Effects from './Effects.svelte';
 
   const WARNINGS: Record<string, string> = {
     'no-size': 'The file has no width, height or viewBox, so it is shown at 300 × 150.',
@@ -71,6 +72,8 @@
       <button type="button" class="btn btn-xs btn-ghost" disabled={!selection.keys.size} onclick={() => selection.clear()}>Clear</button>
     </div>
   </section>
+
+  <Effects />
 
   <section aria-labelledby="file-heading" class="flex flex-col gap-2">
     <h2 id="file-heading" class="font-bold">File</h2>

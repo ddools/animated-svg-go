@@ -92,9 +92,27 @@ test('the inventory describes structure up front and measures on demand', async 
     boxParentIsLayer: true,
     dotReferenced: true,
     // 10 x 20 at (5, 5), padded by half the 2 unit stroke.
-    box: { bbox: { x: 4, y: 4, width: 12, height: 22 }, length: 60, fill: 'rgb(255, 0, 0)', stroke: 'rgb(0, 0, 255)', strokeWidth: 2, degenerate: false },
+    box: { bbox: { x: 4, y: 4, width: 12, height: 22 }, length: 60, fill: 'rgb(255, 0, 0)', stroke: 'rgb(0, 0, 255)', strokeWidth: 2, dashed: false, degenerate: false },
     lineLength: 100,
   });
+});
+
+test('the inventory knows what can move, and measures dashes in their own units', async ({ page }) => {
+  await open(
+    page,
+    `<svg ${NS} viewBox="0 0 100 100"><path id="scaled" d="M0 10H100" stroke="red" pathLength="1"/><path id="dashed" d="M0 20H50" stroke="red" stroke-dasharray="4 2"/><switch><rect id="branch" width="5" height="5"/></switch></svg>`,
+  );
+  const read = await page.evaluate(() => {
+    const { nodes, measure } = window.__asg!.editor.inventory!;
+    const byLabel = (label: string) => [...nodes.values()].find((node) => node.label === label)!;
+    return {
+      scaled: measure(byLabel('scaled').key)!.length,
+      dashed: [measure(byLabel('dashed').key)!.dashed, measure(byLabel('scaled').key)!.dashed],
+      wrapped: [byLabel('dashed').wrapped, byLabel('branch').wrapped],
+    };
+  });
+  // pathLength rescales dashes. Children of <switch> are never wrapped.
+  expect(read).toEqual({ scaled: 1, dashed: [true, false], wrapped: [true, false] });
 });
 
 test('the editor can ask the sandbox what is under a point', async ({ page }) => {
