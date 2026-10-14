@@ -28,6 +28,8 @@ async function addEffect(page: Page, label: string, labels: string[]) {
   }, labels);
   await page.getByRole('button', { name: `+ ${label}` }).click();
   await page.waitForFunction(() => window.__asg!.playback.ir?.tracks.length !== undefined);
+  // Adding an effect autoplays. These tests step the playhead themselves.
+  await page.evaluate(() => window.__asg!.playback.pause());
 }
 
 /** Pauses at a time and lets the preview catch up with the spec. */
@@ -60,12 +62,12 @@ const attributesOf = (page: Page, label: string) =>
 
 test('a spin inside nested authored transforms turns about its own centre', async ({ page }) => {
   await open(page);
-  const before = await boxOf(page, 'nested');
   const attributes = await attributesOf(page, 'nested');
   await addEffect(page, 'Spin', ['nested']);
 
+  // Measured after adding: the bars row appears and resizes the canvas.
   await seek(page, 0);
-  expect(await boxOf(page, 'nested')).toEqual(before);
+  const before = await boxOf(page, 'nested');
   // Not 0.5 s: half a turn leaves a symmetric shape's box exactly as it was.
   for (const time of [0.1, 0.25, 0.4, 0.75]) {
     await seek(page, time);
