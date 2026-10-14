@@ -36,7 +36,7 @@
     }, mode);
   }
 
-  // The curve box maps x 0..1 to 10..110 and y -0.5..1.5 to 125..25. Handles outside it pin to its edge.
+  // The curve box maps x 0..1 to 10..110 and y -0.5..1.5 to 100..0. Handles outside it pin to its edge.
   const px = (x: number) => 10 + 100 * x;
   const py = (y: number) => 100 - (Math.min(1.5, Math.max(-0.5, y)) + 0.5) * 50;
 
@@ -107,6 +107,7 @@
           onpointerdown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
           onpointermove={(event) => move(event, handle)}
           onpointerup={() => project.settle()}
+          onpointercancel={() => project.settle()}
           onkeydown={(event) => key(event, handle)}
         />
       {/each}
