@@ -88,8 +88,11 @@ export function exportMarkup(svg: string, scope: string, style?: string): string
   return style ? withStyle(checked, style) : checked;
 }
 
+/** Markup that came out of checkedExport. Only withStyle takes it, so nothing unchecked gets a style and ships. */
+export type Checked = string & { readonly checked: unique symbol };
+
 /** The file part of an export, sanitised. The slow half: raster export runs it once, not once a frame. */
-export function checkedExport(svg: string, scope: string): string {
+export function checkedExport(svg: string, scope: string): Checked {
   const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
   const root = doc.documentElement;
   if (root.localName !== 'svg' || doc.querySelector('parsererror')) throw new Error('Export refused: not a well-formed SVG.');
@@ -101,11 +104,11 @@ export function checkedExport(svg: string, scope: string): string {
     root.setAttribute('height', num(height));
   }
   // The same sanitiser as uploads, so no <style> comes out of it: only ours is added, by withStyle.
-  return new XMLSerializer().serializeToString(sanitise(new XMLSerializer().serializeToString(root)).root);
+  return new XMLSerializer().serializeToString(sanitise(new XMLSerializer().serializeToString(root)).root) as Checked;
 }
 
 /** Adds `style`, checked, first inside the root of a `checkedExport` result. Cheap enough for every frame. */
-export function withStyle(checked: string, style: string): string {
+export function withStyle(checked: Checked, style: string): string {
   if (!exportStyleIsSafe(style)) throw new Error('Export refused: unexpected style.');
   const start = ROOT_START.exec(checked);
   if (!start) throw new Error('Export refused: unexpected root.');
