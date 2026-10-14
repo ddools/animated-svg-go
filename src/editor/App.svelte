@@ -9,6 +9,7 @@
   import * as cssBackend from '../core/backends/css';
   import * as sampler from '../core/backends/sampler';
   import * as snippet from '../core/backends/snippet';
+  import * as frames from '../core/export/frames';
   import { loadFile, loadText } from './load';
   import { mount } from './sandbox';
   import { normaliseFile } from './pipeline';
@@ -27,7 +28,7 @@
       playback,
       // Puts markup in the sandbox without sanitising it, to test the sandbox on its own.
       mountRaw: (svg) => mount(document.querySelector('iframe')!, svg),
-      exports: { ...cssBackend, ...snippet, ...sampler },
+      exports: { ...cssBackend, ...snippet, ...sampler, ...frames },
     };
   }
 

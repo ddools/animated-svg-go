@@ -10,6 +10,7 @@ interface Window {
     mountRaw: (svg: string) => import('./editor/sandbox').Sandbox;
     exports: typeof import('./core/backends/css') &
       typeof import('./core/backends/snippet') &
-      typeof import('./core/backends/sampler');
+      typeof import('./core/backends/sampler') &
+      typeof import('./core/export/frames');
   };
 }
