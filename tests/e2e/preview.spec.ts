@@ -104,6 +104,26 @@ test('draw reveals a stroke along its length, on the element, without writing to
   expect(await attributesOf(page, 'line')).toEqual(attributes);
 });
 
+test('fade sets opacity on the wrapper, and a spin on the same shape still turns it', async ({ page }) => {
+  await open(page);
+  const attributes = await attributesOf(page, 'dot');
+  await addEffect(page, 'Fade', ['dot']);
+  await addEffect(page, 'Spin', ['dot']);
+  const opacities = () =>
+    page.evaluate(() => {
+      const { editor } = window.__asg!;
+      const node = [...editor.inventory!.nodes.values()].find((n) => n.label === 'dot')!;
+      const element = editor.sandbox!.elementFor(node.key)!;
+      const style = (e: Element) => e.ownerDocument.defaultView!.getComputedStyle(e);
+      return [style(element.parentElement!).opacity, style(element).opacity, style(element.parentElement!).transform !== 'none'];
+    });
+  await seek(page, 0);
+  expect(await opacities()).toEqual(['0', '1', true]);
+  await seek(page, 1);
+  expect(await opacities()).toEqual(['1', '1', true]);
+  expect(await attributesOf(page, 'dot')).toEqual(attributes);
+});
+
 test('effects say when they cannot do anything', async ({ page }) => {
   await open(page);
   await addEffect(page, 'Draw', ['dot']);
