@@ -43,7 +43,10 @@ const EASE_IN_OUT = { kind: 'cubic', p: [0.42, 0, 0.58, 1] } as const;
 const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
   { name: 'spin, eased, inside nested transforms', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 270 }, timing: { duration: 2 } }] },
   { name: 'spin about an off-centre pivot', effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 100 }, timing: { duration: 2 }, pivot: { fx: 0, fy: 1 } }] },
+  { name: 'wiggle about an off-centre pivot', effects: [{ type: 'wiggle', labels: ['nested'], params: { angle: 25, wiggles: 5, seed: 7 }, timing: { duration: 2 }, pivot: { fx: 0.2, fy: 0.8 } }] },
   { name: 'fade in late, then hold', effects: [{ type: 'fade', labels: ['dot'], params: { from: 0, to: 1 }, timing: { start: 0.5, duration: 1 } }] },
+  { name: 'slide in from the left, fading up', effects: [{ type: 'slide', labels: ['dot'], params: { from: 'left', distance: 30, fade: 0 }, timing: { duration: 1.5 } }] },
+  { name: 'pop with overshoot, about the centre', effects: [{ type: 'pop', labels: ['dot'], params: { from: 0.1 }, timing: { duration: 1.5 } }] },
   { name: 'draw a line', effects: [{ type: 'draw', labels: ['line'], params: { from: 0, to: 100 }, timing: { duration: 1.5 } }] },
   { name: 'draw every stroke in a group', effects: [{ type: 'draw', labels: ['pair'], params: { from: 20, to: 90 }, timing: { duration: 2 } }] },
   {
@@ -53,6 +56,7 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       { type: 'fade', labels: ['nested'], params: { from: 1, to: 0.2 }, timing: { iterations: 2, direction: 'alternate' } },
     ],
   },
+  { name: 'pulse with a dim peak', effects: [{ type: 'pulse', labels: ['dot'], params: { scale: 1.5, fade: 0.5 }, timing: { duration: 2 } }] },
   { name: 'steps, reversed', effects: [{ type: 'draw', labels: ['line'], timing: { duration: 2, direction: 'reverse', easing: { kind: 'steps', n: 5, pos: 'end' } } }] },
   {
     name: 'two spins stacked on one shape, about different pivots',
@@ -75,6 +79,20 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
         timing: { duration: 0.6 },
         stagger: { gap: 0.35, order: 'random', seed: 42 },
       },
+    ],
+  },
+  {
+    name: 'colour shift on a fill and a group of strokes',
+    effects: [
+      { type: 'colour', labels: ['dot'], params: { property: 'fill', to: '#3355ff' }, timing: { duration: 1.5 } },
+      { type: 'colour', labels: ['pair'], params: { property: 'stroke', to: '#22aa44' }, timing: { duration: 2 } },
+    ],
+  },
+  {
+    name: 'float under a spin, alternating',
+    effects: [
+      { type: 'spin', labels: ['nested'], params: { degrees: 120 }, timing: { duration: 2 } },
+      { type: 'float', labels: ['nested'], params: { x: 12, y: -18 }, timing: { duration: 1, iterations: 2, direction: 'alternate' } },
     ],
   },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
