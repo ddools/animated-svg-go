@@ -101,6 +101,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
 - Chromium logs a CSP violation as soon as it parses a `<style>` element or (without our `style-src-attr` allowance) a style attribute, even in an inert document. If CSP errors appear in the console, look for markup being parsed on the main thread. This is why an export's own `<style>` is checked as text and spliced in, never sanitised as markup.
 - An SVG in `<img>` does not see `prefers-reduced-motion` (both engines, under Playwright emulation). Test reduced motion on inline exports. Real macOS behaviour is unverified.
+- On CI's Linux runner, an SVG in `<img>` in WebKit doesn't match `prefers-reduced-motion: no-preference`, and Chromium antialiases its text subpixel. Parity opens the gate and passes `--disable-lcd-text`. Don't loosen the tolerance for either.
 - The Svelte island hydrates after page load. In tests, wait for `window.__asg` before dispatching events the app listens for.
 - Big collections in editor state (inventory, selection keys) are held in `$state.raw` and replaced, never mutated. Deep reactivity over 20,000 nodes is slower than the pipeline. The `svelte/prefer-svelte-reactivity` lint rule is off for this reason.
 - A `dist/` built by the test suite contains the `window.__asg` test hook. Never deploy a prebuilt `dist/`. Vercel builds its own from source.
