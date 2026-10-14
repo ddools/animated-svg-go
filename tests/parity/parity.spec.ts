@@ -143,6 +143,18 @@ async function load(page: Page, loop: boolean, drafts: Draft[]): Promise<{ svg: 
   );
 }
 
+const GATE = '@media (prefers-reduced-motion:no-preference){';
+
+/**
+ * The CSS export frozen at t: a paused animation with a negative delay shows that moment. Test only, injected
+ * after the export check. The reduced-motion gate is opened too: an SVG in <img> on CI's Linux WebKit doesn't
+ * match `no-preference`, so nothing would play. Reduced motion has its own test below.
+ */
+function frozen(exported: string, t: number): string {
+  expect(exported).toContain(GATE);
+  return exported.replace(GATE, '@media all{').replace('</style>', `*{animation-play-state:paused!important;animation-delay:${-t}s!important}</style>`);
+}
+
 async function preview(page: Page, t: number): Promise<Buffer> {
   await page.evaluate((s) => window.__asg!.playback.seek(s), t);
   // The overlay sits over the iframe. Hidden for the shot only.
@@ -158,8 +170,7 @@ for (const { name, loop = true, tolerance = TOLERANCE, effects } of SCENARIOS) {
 
     const exported = await page.evaluate(([svg, ir]) => window.__asg!.exports.animatedSvg(svg, ir), [svg, ir] as const);
     for (const t of TIMES) {
-      // A paused animation with a negative delay shows that moment. Test only: injected after the export check.
-      const paused = exported.replace('</style>', `*{animation-play-state:paused!important;animation-delay:${-t}s!important}</style>`);
+      const paused = frozen(exported, t);
       // The raster path: the file checked once, each frame's style checked and spliced in.
       const frame = await page.evaluate(
         ([svg, ir, t]) => {
@@ -239,7 +250,7 @@ test('the harness notices a frame that is 50 ms out', async ({ page, context }) 
   await openEditor(page);
   const { svg, ir } = await load(page, true, SCENARIOS[0].effects);
   const exported = await page.evaluate(([svg, ir]) => window.__asg!.exports.animatedSvg(svg, ir), [svg, ir] as const);
-  const late = exported.replace('</style>', '*{animation-play-state:paused!important;animation-delay:-0.67s!important}</style>');
+  const late = frozen(exported, 0.67);
   const result = compare(await preview(page, 0.62), (await render(context, late, BOX)).png);
   expect('ratio' in result && result.ratio).toBeGreaterThan(TOLERANCE * 10);
 });
