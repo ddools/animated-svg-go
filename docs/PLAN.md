@@ -129,7 +129,7 @@ Done. Merged in PRs #10, #13 and #14. Decided with Der: Colour shift is solid co
 
 ## Stage 6. GIF and MP4 export (M6, risk 4)
 
-Plan approved 14 Oct. Runs before the rest of Stage 5: raster export reads only the IR, so it doesn't wait on the effects, and it is the last open risk. Branch `feat/m6-raster` from `main` once PR #10 merges.
+Plan approved 14 Oct. Started alongside the Stage 5 effects: raster export reads only the IR, so it never waited on them. Built on `feat/m6-raster`.
 
 Approved decisions:
 
