@@ -32,6 +32,15 @@ const base = {
   timing: TimingSchema,
   /** Fraction of each target's box. Transform effects only. Default centre. */
   pivot: z.object({ fx: unit, fy: unit }).optional(),
+  /** Starts each target `gap` seconds after the one before, in this order. */
+  stagger: z
+    .object({
+      gap: z.number().min(0).max(10),
+      /** start and end are document order; centre, x and y go by position; random uses the seed. */
+      order: z.enum(['start', 'end', 'centre', 'random', 'x', 'y']),
+      seed: z.int().min(0).max(2 ** 32 - 1),
+    })
+    .optional(),
 };
 
 export const EffectSchema = z.discriminatedUnion('type', [

@@ -30,7 +30,14 @@ const TOLERANCE = 0.0005;
 // Away from jumps, run ends and half turns.
 const TIMES = [0.13, 0.62, 1.37, 1.9];
 
-type Draft = { type: Effect['type']; labels: string[]; params?: object; timing?: Partial<Effect['timing']>; pivot?: Effect['pivot'] };
+type Draft = {
+  type: Effect['type'];
+  labels: string[];
+  params?: object;
+  timing?: Partial<Effect['timing']>;
+  pivot?: Effect['pivot'];
+  stagger?: Effect['stagger'];
+};
 const EASE_IN_OUT = { kind: 'cubic', p: [0.42, 0, 0.58, 1] } as const;
 
 const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
@@ -57,6 +64,18 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
   {
     name: 'a bouncing spring, there and back',
     effects: [{ type: 'spin', labels: ['nested'], params: { degrees: 90 }, timing: { iterations: 2, direction: 'alternate', easing: { kind: 'spring', bounce: 0.6 } } }],
+  },
+  {
+    name: 'a random stagger, looping',
+    effects: [
+      {
+        type: 'fade',
+        labels: ['nested', 'line', 'dot', 'pair'],
+        params: { from: 0, to: 1 },
+        timing: { duration: 0.6 },
+        stagger: { gap: 0.35, order: 'random', seed: 42 },
+      },
+    ],
   },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
@@ -87,6 +106,7 @@ async function load(page: Page, loop: boolean, drafts: Draft[]): Promise<{ svg: 
         params: draft.params ?? {},
         timing: { start: 0, duration: 1, easing: ease, iterations: 1, direction: 'normal', ...draft.timing },
         ...(draft.pivot && { pivot: draft.pivot }),
+        ...(draft.stagger && { stagger: draft.stagger }),
       }));
       // Nothing selected and no effect active, so the overlay draws nothing.
       selection.set([]);

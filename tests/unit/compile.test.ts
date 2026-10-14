@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compile, easingCss, planRuns, springPoints } from '../../src/core/ir/compile';
+import { compile, easingCss, planRuns, springPoints, staggerOrder } from '../../src/core/ir/compile';
 import { ease } from '../../src/core/ir/evaluate';
 import type { InventoryView } from '../../src/core/ir/types';
 import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
@@ -206,6 +206,37 @@ describe('compile', () => {
     const ir = compile(spec([late]), inventory({ key: 'a' }));
     expect(ir.tracks).toEqual([]);
     expect(ir.notes).toEqual([{ effect: late.id, code: 'outside', targets: ['a'] }]);
+  });
+});
+
+describe('stagger', () => {
+  const row = inventory(
+    { key: 'a', bbox: { x: 20, y: 0, width: 10, height: 10 } },
+    { key: 'b', bbox: { x: 0, y: 30, width: 10, height: 10 } },
+    { key: 'c', bbox: { x: 40, y: 10, width: 10, height: 10 } },
+  );
+  const by = (order: NonNullable<Effect['stagger']>['order'], seed = 1) => staggerOrder(['c', 'a', 'b'], { gap: 1, order, seed }, row);
+
+  it('orders by document, position or a seeded shuffle', () => {
+    expect(by('start')).toEqual(['a', 'b', 'c']);
+    expect(by('end')).toEqual(['c', 'b', 'a']);
+    expect(by('x')).toEqual(['b', 'a', 'c']);
+    expect(by('y')).toEqual(['a', 'c', 'b']);
+    expect(by('centre')[0]).toBe('a');
+    expect(by('random', 7)).toEqual(by('random', 7));
+    expect(new Set([1, 2, 3, 4, 5].map((seed) => by('random', seed).join()))).not.toHaveProperty('size', 1);
+  });
+
+  it('starts each target a gap after the one before, and notes those pushed past the end', () => {
+    const fade = effect('fade', ['a', 'b', 'c'], { start: 0.5, duration: 1 }, { stagger: { gap: 1.5, order: 'start', seed: 0 } });
+    const ir = compile(spec([fade]), row);
+    expect(ir.tracks.map((t) => [t.target, t.keyframes[1].offset])).toEqual([
+      ['a', 0.125],
+      ['b', 0.5],
+      ['c', 0.875],
+    ]);
+    // c starts at 3.5, so its run is squeezed into the last half second.
+    expect(ir.notes).toEqual([{ effect: fade.id, code: 'squeezed', targets: ['c'] }]);
   });
 });
 

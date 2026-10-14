@@ -4,8 +4,8 @@
 // shares one clock. Each effect describes one run; this file places the runs, mirrors
 // reversed ones, merges effects on the same target and property, and holds values between them.
 // Transforms are the exception: they stack, one track per effect, in list order.
-import { EFFECTS, type Easing, type EffectModule, type EffectType, type Spec, type Timing } from '../spec/schema';
-import { num } from './format';
+import { EFFECTS, type Easing, type Effect, type EffectModule, type EffectType, type Spec, type Timing } from '../spec/schema';
+import { num, random } from './format';
 import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type InventoryView, type IR, type Keyframe, type LocalTrack, type Note, type NoteCode, type Track } from './types';
 
 // Floating point slack when fitting runs into the timeline, in seconds.
@@ -115,6 +115,37 @@ function join(windows: Window[], total: number): Timed[] {
   return out;
 }
 
+/** Targets in the order a stagger starts them. Ties keep document order. */
+export function staggerOrder(targets: string[], { order, seed }: NonNullable<Effect['stagger']>, inventory: InventoryView): string[] {
+  const position = new Map([...inventory.nodes.keys()].map((key, i) => [key, i]));
+  const keys = [...targets].sort((a, b) => position.get(a)! - position.get(b)!);
+  if (order === 'start') return keys;
+  if (order === 'end') return keys.reverse();
+  if (order === 'random') {
+    const next = random(seed);
+    for (let i = keys.length - 1; i > 0; i--) {
+      const j = Math.floor(next() * (i + 1));
+      [keys[i], keys[j]] = [keys[j], keys[i]];
+    }
+    return keys;
+  }
+  // ponytail: boxes are in each target's parent space, so position orders are exact for siblings
+  // and approximate across groups with their own transforms. Use screen boxes if that shows.
+  const centres = new Map(
+    keys.map((key) => {
+      const box = inventory.measure(key)?.bbox ?? { x: 0, y: 0, width: 0, height: 0 };
+      return [key, { x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+    }),
+  );
+  const all = [...centres.values()];
+  const middle = { x: all.reduce((sum, c) => sum + c.x, 0) / all.length, y: all.reduce((sum, c) => sum + c.y, 0) / all.length };
+  const rank = (key: string) => {
+    const c = centres.get(key)!;
+    return order === 'x' ? c.x : order === 'y' ? c.y : Math.hypot(c.x - middle.x, c.y - middle.y);
+  };
+  return keys.sort((a, b) => rank(a) - rank(b));
+}
+
 export function compile(spec: Spec, inventory: InventoryView): IR {
   const total = spec.duration;
   const found = new Map<string, Note>();
@@ -131,29 +162,37 @@ export function compile(spec: Spec, inventory: InventoryView): IR {
     for (const key of effect.targets) if (!inventory.nodes.has(key)) note(effect.id, 'missing', key);
     if (!targets.length) return;
 
-    const { runs, code } = planRuns(effect.timing, total);
-    if (code) for (const key of targets) note(effect.id, code, key);
-    if (!runs.length) return;
-
     const module = EFFECTS[effect.type] as EffectModule<EffectType>;
-    const local = module.compile({ ...effect, targets }, inventory);
-    for (const { code, target } of local.notes) note(effect.id, code, target);
+    // A stagger gives each target its own start, so each is planned and compiled on its own.
+    const { stagger } = effect;
+    const batches = stagger
+      ? staggerOrder(targets, stagger, inventory).map((key, i) => ({ targets: [key], start: effect.timing.start + i * stagger.gap }))
+      : [{ targets, start: effect.timing.start }];
 
-    for (const track of local.tracks) {
-      if (WRAPPER_PROPERTIES.has(track.property) && !inventory.nodes.get(track.target)?.wrapped) {
-        note(effect.id, 'unwrapped', track.target);
-        continue;
+    for (const batch of batches) {
+      const { runs, code } = planRuns({ ...effect.timing, start: batch.start }, total);
+      if (code) for (const key of batch.targets) note(effect.id, code, key);
+      if (!runs.length) continue;
+
+      const local = module.compile({ ...effect, targets: batch.targets }, inventory);
+      for (const { code, target } of local.notes) note(effect.id, code, target);
+
+      for (const track of local.tracks) {
+        if (WRAPPER_PROPERTIES.has(track.property) && !inventory.nodes.get(track.target)?.wrapped) {
+          note(effect.id, 'unwrapped', track.target);
+          continue;
+        }
+        // Transforms stack, so each effect keeps its own track. Everything else merges into one.
+        const id = `${track.target}|${track.property}${ADDITIVE_PROPERTIES.has(track.property) ? `|${effect.id}` : ''}`;
+        const group = groups.get(id) ?? groups.set(id, { target: track.target, property: track.property, windows: [] }).get(id)!;
+        group.windows.push({
+          effect: effect.id,
+          order,
+          start: runs[0].start,
+          end: runs.at(-1)!.end,
+          keyframes: place(track, runs, effect.timing.easing),
+        });
       }
-      // Transforms stack, so each effect keeps its own track. Everything else merges into one.
-      const id = `${track.target}|${track.property}${ADDITIVE_PROPERTIES.has(track.property) ? `|${effect.id}` : ''}`;
-      const group = groups.get(id) ?? groups.set(id, { target: track.target, property: track.property, windows: [] }).get(id)!;
-      group.windows.push({
-        effect: effect.id,
-        order,
-        start: runs[0].start,
-        end: runs.at(-1)!.end,
-        keyframes: place(track, runs, effect.timing.easing),
-      });
     }
   });
 
