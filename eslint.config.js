@@ -4,7 +4,7 @@ import ts from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
 
 export default defineConfig(
-  { ignores: ['dist/', '.astro/', '.vercel/', 'playwright-report/', 'test-results/'] },
+  { ignores: ['dist/', '.astro/', '.vercel/', 'playwright-report/', 'test-results/', '.claude/'] },
   js.configs.recommended,
   ts.configs.recommended,
   svelte.configs.recommended,
