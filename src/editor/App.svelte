@@ -4,9 +4,12 @@
   import Overlay from './Overlay.svelte';
   import Panel from './Panel.svelte';
   import Sandbox from './Sandbox.svelte';
+  import Timeline from './Timeline.svelte';
   import { loadFile, loadText } from './load';
   import { mount } from './sandbox';
   import { normaliseFile } from './pipeline';
+  import { playback } from './playback.svelte';
+  import { project } from './project.svelte';
   import { selection } from './selection.svelte';
   import { editor } from './state.svelte';
 
@@ -16,9 +19,26 @@
       normalise: normaliseFile,
       editor,
       selection,
+      project,
+      playback,
       // Puts markup in the sandbox without sanitising it, to test the sandbox on its own.
       mountRaw: (svg) => mount(document.querySelector('iframe')!, svg),
     };
+  }
+
+  // Autosave. save() reads the spec, so this runs again on every change.
+  $effect(() => {
+    if (editor.status === 'ready') project.save();
+  });
+
+  function keydown(event: KeyboardEvent) {
+    if (editor.status !== 'ready' || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return;
+    // Text and number fields keep their own undo.
+    const field = event.target as HTMLInputElement;
+    if (field.localName === 'input' && !['range', 'checkbox'].includes(field.type)) return;
+    event.preventDefault();
+    if (event.shiftKey) project.redo();
+    else project.undo();
   }
 
   function drop(event: DragEvent) {
@@ -35,14 +55,18 @@
   }
 </script>
 
-<svelte:window ondragover={(event) => event.preventDefault()} ondrop={drop} onpaste={paste} />
+<svelte:window ondragover={(event) => event.preventDefault()} ondrop={drop} onpaste={paste} onkeydown={keydown} />
 
 <div class="flex h-screen flex-col">
   <header class="border-base-300 flex items-center gap-4 border-b px-4 py-2">
     <h1 class="text-lg font-bold">Animated SVG GO</h1>
     {#if editor.status === 'ready'}
       <span class="truncate text-sm opacity-70">{editor.fileName}</span>
-      <span class="ml-auto"><DropZone compact /></span>
+      <span class="ml-auto flex gap-1">
+        <button type="button" class="btn btn-sm btn-ghost" disabled={!project.past.length} onclick={() => project.undo()} title="Undo (⌘Z)">Undo</button>
+        <button type="button" class="btn btn-sm btn-ghost" disabled={!project.future.length} onclick={() => project.redo()} title="Redo (⇧⌘Z)">Redo</button>
+      </span>
+      <DropZone compact />
     {/if}
   </header>
 
@@ -54,11 +78,14 @@
             {#key editor.inventory}<LayerTree />{/key}
           {/if}
         </nav>
-        <div class="canvas min-h-0 p-6" data-testid="canvas">
-          <div class="relative h-full">
-            <Sandbox result={editor.result} />
-            {#if editor.inventory}<Overlay />{/if}
+        <div class="flex min-h-0 flex-col">
+          <div class="canvas min-h-0 flex-1 p-6" data-testid="canvas">
+            <div class="relative h-full">
+              <Sandbox result={editor.result} />
+              {#if editor.inventory}<Overlay />{/if}
+            </div>
           </div>
+          <Timeline />
         </div>
         <aside class="border-base-300 min-h-0 overflow-y-auto border-l">
           {#if editor.inventory}<Panel />{/if}
