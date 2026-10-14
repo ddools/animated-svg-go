@@ -55,6 +55,7 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       { type: 'fade', labels: ['nested'], params: { from: 1, to: 0.2 }, timing: { iterations: 2, direction: 'alternate' } },
     ],
   },
+  { name: 'pulse with a dim peak', effects: [{ type: 'pulse', labels: ['dot'], params: { scale: 1.5, fade: 0.5 }, timing: { duration: 2 } }] },
   { name: 'steps, reversed', effects: [{ type: 'draw', labels: ['line'], timing: { duration: 2, direction: 'reverse', easing: { kind: 'steps', n: 5, pos: 'end' } } }] },
   {
     name: 'two spins stacked on one shape, about different pivots',
