@@ -1,12 +1,15 @@
 // The spec is the only state (invariant 5). See docs/ARCHITECTURE.md section 3.
-import { z } from 'zod';
+import { z } from './zod';
 import type { InventoryView, LocalNote, LocalTrack } from '../ir/types';
+import { colour, ColourParams } from './effects/colour';
 import { draw, DrawParams } from './effects/draw';
 import { fade, FadeParams } from './effects/fade';
+import { slide, SlideParams } from './effects/slide';
+import { pop, PopParams } from './effects/pop';
+import { pulse, PulseParams } from './effects/pulse';
+import { float, FloatParams } from './effects/float';
 import { spin, SpinParams } from './effects/spin';
-
-// No eval. Zod otherwise probes `new Function` on first parse, and Firefox reports the CSP block as an error.
-z.config({ jitless: true });
+import { wiggle, WiggleParams } from './effects/wiggle';
 
 const unit = z.number().min(0).max(1);
 const key = z.string().min(1).max(64);
@@ -50,6 +53,12 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('spin'), params: SpinParams }),
   z.object({ ...base, type: z.literal('fade'), params: FadeParams }),
   z.object({ ...base, type: z.literal('draw'), params: DrawParams }),
+  z.object({ ...base, type: z.literal('colour'), params: ColourParams }),
+  z.object({ ...base, type: z.literal('slide'), params: SlideParams }),
+  z.object({ ...base, type: z.literal('pop'), params: PopParams }),
+  z.object({ ...base, type: z.literal('pulse'), params: PulseParams }),
+  z.object({ ...base, type: z.literal('wiggle'), params: WiggleParams }),
+  z.object({ ...base, type: z.literal('float'), params: FloatParams }),
 ]);
 
 export const SpecSchema = z.object({
@@ -97,7 +106,7 @@ export type EffectModule<T extends EffectType> = {
   compile(effect: Extract<Effect, { type: T }>, inventory: InventoryView): { tracks: LocalTrack[]; notes: LocalNote[] };
 };
 
-export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw };
+export const EFFECTS: { [T in EffectType]: EffectModule<T> } = { spin, fade, draw, colour, slide, pop, pulse, wiggle, float };
 
 export function newSpec(): Spec {
   return { version: 1, duration: 2, loop: true, effects: [] };

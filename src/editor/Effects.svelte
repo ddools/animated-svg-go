@@ -1,18 +1,10 @@
 <script lang="ts">
   import type { NoteCode } from '../core/ir/types';
-  import { EFFECTS, newEffect, type Easing, type Effect, type EffectType } from '../core/spec/schema';
+  import { EFFECTS, newEffect, type Effect, type EffectType } from '../core/spec/schema';
+  import EasingPicker from './EasingPicker.svelte';
   import { playback } from './playback.svelte';
   import { project } from './project.svelte';
   import { selection } from './selection.svelte';
-
-  const EASINGS: { name: string; easing: Easing }[] = [
-    { name: 'Linear', easing: { kind: 'cubic', p: [0, 0, 1, 1] } },
-    { name: 'Ease', easing: { kind: 'cubic', p: [0.25, 0.1, 0.25, 1] } },
-    { name: 'Ease in', easing: { kind: 'cubic', p: [0.42, 0, 1, 1] } },
-    { name: 'Ease out', easing: { kind: 'cubic', p: [0, 0, 0.58, 1] } },
-    { name: 'Ease in and out', easing: { kind: 'cubic', p: [0.42, 0, 0.58, 1] } },
-    { name: 'Steps', easing: { kind: 'steps', n: 4, pos: 'end' } },
-  ];
 
   const has = (n: number) => (n === 1 ? '1 shape has' : `${n} shapes have`);
   const NOTES: Record<NoteCode, (n: number) => string> = {
@@ -24,8 +16,19 @@
     overlap: (n) => `A later effect animates ${shapes(n)} at the same time. The later one plays.`,
     squeezed: () => "Runs past the end of the timeline, so it's been shortened.",
     outside: () => 'Starts after the timeline ends, so it never plays.',
+    unpainted: (n) => `${has(n)} nothing to recolour.`,
+    painted: (n) => `${shapes(n)} ${n === 1 ? 'uses' : 'use'} a gradient or pattern, which Colour shift can't change yet.`,
     'too-big': (n) => `Too much animation to fit in one file, so ${shapes(n)} won't move. Try fewer shapes or longer runs.`,
   };
+
+  const ORDERS = [
+    ['start', 'File order'],
+    ['end', 'Reverse file order'],
+    ['centre', 'From the centre'],
+    ['random', 'Random'],
+    ['x', 'Left to right'],
+    ['y', 'Top to bottom'],
+  ] as const;
 
   const TYPES = Object.keys(EFFECTS) as EffectType[];
   const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
@@ -41,8 +44,14 @@
 
   function add(type: EffectType) {
     const id = `e${crypto.randomUUID().slice(0, 8)}`;
+    const wasPlaying = playback.playing;
     project.edit((spec) => void spec.effects.push(newEffect(type, [...selection.keys], id)));
     project.active = id;
+    // Show the new effect moving, unless the person has asked their system for less motion.
+    if (!wasPlaying && matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+      playback.refresh();
+      playback.play();
+    }
   }
 
   function remove(id: string) {
@@ -65,11 +74,18 @@
     project.edit((spec) => change(spec.effects.find((effect) => effect.id === id)!));
   }
 
-  const number = (event: Event) => Number((event.currentTarget as HTMLInputElement).value);
+  const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
-  const easingName = $derived(
-    active ? (EASINGS.find(({ easing }) => JSON.stringify(easing) === JSON.stringify(active.timing.easing))?.name ?? 'Custom') : '',
-  );
+  /** A new random seed wherever the active effect has one. One undo step. */
+  function shuffle() {
+    edit((effect) => {
+      if (effect.stagger) effect.stagger.seed = randomSeed();
+      const params = effect.params as { seed?: unknown };
+      if (typeof params.seed === 'number') params.seed = randomSeed();
+    });
+  }
+
+  const number = (event: Event) => Number((event.currentTarget as HTMLInputElement).value);
 </script>
 
 <section aria-labelledby="effects-heading" class="flex flex-col gap-2">
@@ -263,22 +279,59 @@
           <option value="alternate">Back and forth</option>
         </select>
       </label>
-      <label class="flex items-center justify-between gap-2">
-        Easing
-        <select
-          class="select select-xs w-40"
-          value={easingName}
+      <EasingPicker effect={active} />
+
+      <label class="flex items-center gap-1">
+        <input
+          type="checkbox"
+          class="checkbox checkbox-xs"
+          checked={!!active.stagger}
           onchange={(event) => {
-            const chosen = EASINGS.find(({ name }) => name === event.currentTarget.value);
-            if (chosen) edit((effect) => void (effect.timing.easing = structuredClone(chosen.easing)));
+            const on = event.currentTarget.checked;
+            edit((effect) => {
+              if (on) effect.stagger = { gap: 0.1, order: 'start', seed: randomSeed() };
+              else delete effect.stagger;
+            });
           }}
-        >
-          {#each EASINGS as { name } (name)}
-            <option>{name}</option>
-          {/each}
-          {#if easingName === 'Custom'}<option disabled>Custom</option>{/if}
-        </select>
+        />
+        Stagger
       </label>
+      {#if active.stagger}
+        <label class="flex flex-col gap-1">
+          <span class="flex justify-between">Gap <span>{active.stagger.gap} s</span></span>
+          <input
+            type="range"
+            class="range range-xs"
+            min="0"
+            max="2"
+            step="0.05"
+            value={active.stagger.gap}
+            oninput={(event) => {
+              const next = number(event);
+              drag((effect) => void (effect.stagger && (effect.stagger.gap = next)));
+            }}
+            onchange={() => project.settle()}
+          />
+        </label>
+        <label class="flex items-center justify-between gap-2">
+          Order
+          <select
+            class="select select-xs w-40"
+            value={active.stagger.order}
+            onchange={(event) => {
+              const next = event.currentTarget.value as NonNullable<Effect['stagger']>['order'];
+              edit((effect) => void (effect.stagger && (effect.stagger.order = next)));
+            }}
+          >
+            {#each ORDERS as [value, label] (value)}
+              <option {value}>{label}</option>
+            {/each}
+          </select>
+        </label>
+      {/if}
+      {#if active.stagger || typeof (active.params as { seed?: unknown }).seed === 'number'}
+        <button type="button" class="btn btn-xs btn-outline self-start" onclick={shuffle}>Shuffle</button>
+      {/if}
     </div>
   {/if}
 </section>
