@@ -92,7 +92,7 @@ function inspect({ markup, exported = false }: { markup: string; exported?: bool
       if (attr === 'data-for' && !keys.has(value)) problems.push(`data-for="${value}" points at no element`);
       if (attr === 'data-anim' && (tag !== 'g' || !element.hasAttribute('data-for'))) problems.push(`data-anim on <${tag}>`);
       if (attr === 'data-asg' && element !== doc.documentElement) problems.push(`data-asg on <${tag}>`);
-      if (element === doc.documentElement && ['style', 'class', 'overflow'].includes(attr)) problems.push(`${name} on the root`);
+      if (element === doc.documentElement && ['style', 'class', 'overflow', 'transform', 'transform-origin', 'filter'].includes(attr)) problems.push(`${name} on the root`);
       if (attr === 'id' && !/^a[0-9a-f]{8}-/.test(value)) problems.push(`id="${value}" is not namespaced`);
       if (attr === 'href' || attr === 'xlink:href') {
         const local = value.startsWith('#') || (tag === 'image' && RASTER.test(value));

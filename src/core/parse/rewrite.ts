@@ -13,9 +13,12 @@ const ID_LIST_ATTRS = new Set(['aria-labelledby', 'aria-describedby']);
 const LOCAL_URL_START = /url\(\s*['"]?#/gi;
 // Ours. Authored copies could spoof keys and wrappers, so they are removed before stamping.
 const RESERVED_ATTRS = ['data-k', 'data-anim', 'data-for', 'data-asg'];
-// On the root these style the host page's box, not the drawing: pasted inline, a file could
-// cover the whole page. SVGO has already moved presentation styles and classes to attributes.
-const ROOT_BOX_ATTRS = ['style', 'class', 'overflow'];
+// On the root these act on the host page's box, not the drawing: pasted inline, a file could
+// cover the page (a transform moves and grows the box; Chromium paints a root filter outside the clip).
+// SVGO has already moved presentation styles and classes to attributes. A transform on the root
+// was ignored in SVG 1.1, so tools rarely write one.
+// ponytail: a deny-list, from the M4 security review. An allow-list holds up better as browsers map more SVG 2 attributes to CSS.
+const ROOT_BOX_ATTRS = ['style', 'class', 'overflow', 'transform', 'transform-origin', 'filter'];
 
 export type Warning = 'no-size';
 
