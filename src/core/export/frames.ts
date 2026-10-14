@@ -14,6 +14,8 @@ export type FrameOptions = {
   /** A CSS colour painted under every frame. MP4 has no alpha. */
   background: string;
   signal?: AbortSignal;
+  /** Draw only these moments instead of the whole pass. The GIF size estimate samples a few. */
+  times?: number[];
 };
 
 /**
@@ -27,6 +29,9 @@ export function frameTimes(duration: number, fps: number, loop: boolean): number
   return loop ? times : [...times, duration];
 }
 
+/** Seconds between frames: one pass spread evenly, so not always exactly 1 / fps. */
+export const frameStep = (duration: number, fps: number): number => duration / Math.max(1, Math.round(duration * fps));
+
 // Safari has no scheduler.yield.
 const yieldToUi = (): Promise<void> => globalThis.scheduler?.yield?.() ?? new Promise((resolve) => setTimeout(resolve));
 
@@ -36,16 +41,16 @@ const yieldToUi = (): Promise<void> => globalThis.scheduler?.yield?.() ?? new Pr
  * Main thread on purpose: Safari decodes SVG images there. Cancel with `signal`; it rejects with the abort reason.
  */
 export async function renderFrames(
-  { svg, ir, size, fps, background, signal }: FrameOptions,
+  { svg, ir, size, fps, background, signal, times = frameTimes(ir.duration, fps, ir.iterations === 'infinite') }: FrameOptions,
   onFrame: (canvas: HTMLCanvasElement, index: number, count: number) => void | Promise<void>,
 ): Promise<void> {
   const scope = scopeOf(svg, ir);
   const checked = checkedExport(svg, scope);
-  const times = frameTimes(ir.duration, fps, ir.iterations === 'infinite');
   const canvas = document.createElement('canvas');
   canvas.width = size.width;
   canvas.height = size.height;
-  const ctx = canvas.getContext('2d');
+  // GIF reads every frame back.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('No 2D canvas.');
 
   for (const [i, t] of times.entries()) {
