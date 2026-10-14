@@ -209,12 +209,12 @@ Measured: compile plus `apply` for a 200-shape spin takes 1.5 ms in Chromium and
 | Fade | opacity | from, to | |
 | Spin | transform | degrees (one param: 720 is two turns) | Pivot handle |
 | Draw | stroke-dashoffset/dasharray | from %, to % | Dash length from `pathLength` if set, else `getTotalLength()`. Gap is twice the length so no round cap shows at 0 %. Fill-only shapes get a note. The "outline then fill" variant needs `fill-opacity` and is not in v1. Notes authored dashes |
-| Pop | transform | scale | Spring easing by default (bounce is the overshoot) |
-| Float | transform | distance x/y | Alternate direction |
-| Wiggle | transform | angle, frequency | Seeded noise baked to keyframes |
-| Pulse | transform, opacity | scale, frequency | Cap at 3 Hz (WCAG 2.3.1) |
-| Slide in | transform, opacity | direction, distance | |
-| Colour shift | fill / stroke | colours (default: colours in file) | Solid colours only in v1. Gradient and pattern paint gets a note |
+| Pop | transform | start size | Spring easing by default, bounce 0.5 (the overshoot). Pivot handle |
+| Float | transform | x, y | Starts alternating until the end. No pivot |
+| Wiggle | transform | angle, wiggles per run, seed | Alternating swings of 50 to 100% of the angle from a seeded random source, baked to keyframes. Every target shares them; stagger varies the timing. Pivot handle |
+| Pulse | transform, opacity | size, opacity at peak | One pulse per run, until the end by default. Runs under 1/3 s are refused (WCAG 2.3.1). Opacity only when it dims. Pivot handle |
+| Slide in | transform, opacity | from (side), distance, start opacity | Eases out. Opacity only when it starts below 1. Motion past the viewBox is clipped |
+| Colour shift | fill or stroke | to | From each shape's own colour to one chosen colour. The file's alpha carries over, so only the colour moves. Solid colours only in v1; gradient and pattern paint gets a note. Groups recolour each shape |
 | Stagger | a setting on any effect | order (start, end, centre, random, by x, by y), gap | Not an effect type. A staggered Fade or Pop is the "reveal" |
 
 Each effect carries an `exports` badge: all v1 effects must be `css`. Morph and motion path (v1.1) will be `smil`.
