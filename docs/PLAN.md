@@ -143,8 +143,8 @@ Approved decisions:
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
 | 1 | Spike: one 1080p frame on a canvas in WebKit. Canvas not tainted, `decode()` ready to paint | Opus | Re-plan if it fails | ✓ Passed in Chromium and WebKit. Numbers in ARCHITECTURE section 5 |
-| 2 | Split `exportMarkup`. Frame loop: yielding, streaming, cancel | Opus | `security-reviewer` on the split |  |
-| 3 | Raster parity scenario, plus a `<text>` fixture (replaces font embedding) | Opus | |  |
+| 2 | Split `exportMarkup`. Frame loop: yielding, streaming, cancel | Opus | `security-reviewer` on the split | ✓ Reviewed. Nothing critical, high or medium. Two lows fixed (branded type, frame detonation test) |
+| 3 | Raster parity scenario, plus a `<text>` fixture (replaces font embedding) | Opus | | ✓ Every scenario matches in Chromium and WebKit |
 | 4 | MP4 through Mediabunny with capability detection | Sonnet | Opus reviews |  |
 | 5 | GIF through gifenc with a size estimate | Sonnet | Opus reviews |  |
 | 6 | Resolution, fps and background presets. Progress and cancel UI | Sonnet builds, Haiku drafts copy | Der reads the copy |  |

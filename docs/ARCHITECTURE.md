@@ -241,11 +241,15 @@ Exports are made on demand when the user copies or downloads, not on every edit:
 
 `pnpm parity` (`tests/parity/`, Chromium and WebKit, also in CI). For eight scenarios at four fixed times, it renders three frames in one 512 × 384 box and pixel-diffs them: the editor's WAAPI preview after a seek; the animated SVG export in `<img>`, frozen at t by an injected `animation-play-state: paused; animation-delay: -t`; and the sampler's static frame in `<img>`. Times avoid jumps, run ends and half turns. It also checks that `prefers-reduced-motion` reaches an SVG in `<img>`, with a control.
 
+Since M6 it also draws every scenario through the frame loop at 3 fps and compares each canvas with the sampler frame in `<img>`. A `<text>` in the fixture checks installed fonts on every path. Chromium antialiases live text slightly differently from text in an image (0.06% to 0.09% measured, all on the glyphs), so the text scenario allows 0.2% for preview against export only. Raster frames match the sampler at the usual tolerance in both engines.
+
 Measured in M4, headless on an M-series Mac: every scenario passes in both engines. The worst diff was 0.002% of pixels (Chromium, preview against CSS export). WebKit and the sampler matched to the pixel. Tolerance is 0.05%; a control test shows a frame 50 ms out fails it by more than ten times.
 
 ### Raster frame loop
 
-For each frame t: the export with `frameCss(ir, t, scope)` as its style -> Blob URL -> `new Image()` -> `await img.decode()` -> `ctx.drawImage`. Yield between frames (`scheduler.yield()` or `setTimeout(0)`) so the UI stays responsive. Assume SVG decoding needs the main thread on Safari. Running the export check on every frame is too slow at the caps, so M6 needs a cheaper path for frames, which never leave the browser.
+`renderFrames` in `core/export/frames.ts`. The file goes through `checkedExport` (parse, scope, size, sanitise) once. For each frame t: `withStyle(checked, frameCss(ir, t, scope))`, which checks the style text and splices it in -> Blob URL -> `new Image()` -> `await img.decode()` -> background fill and `ctx.drawImage` on one reused canvas -> `onFrame`, which hands the canvas to the encoder before the next frame is drawn. Nothing is held between frames. `checkedExport` returns a branded `Checked` string, so `withStyle` can't be handed unchecked markup. Yield between frames (`scheduler.yield()`, else `setTimeout`). Main thread, because Safari decodes SVG images there. Cancel with an `AbortSignal`.
+
+Frame times: `frameTimes(duration, fps, loop)` spreads `round(duration × fps)` frames evenly over one pass. A loop leaves out its end (its start again); a timeline that plays once keeps it. Encoders time each frame at `duration / count`, not `1 / fps`.
 
 Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
 
@@ -331,4 +335,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Stagger is an optional setting on every effect, not an effect type. Each target is planned on its own, not phase-shifted with a negative delay.
 - 2026-10-14: Colour shift animates solid fill and stroke only, as `rgb()`. Gradients are not cloned in v1, so `core/parse` is unchanged.
 - 2026-10-14: Security review of the M5 contracts. Nothing critical, high or medium. Fixed: a stored spec could make compile build hundreds of megabytes (now duplicate targets are dropped, easings made once per effect, and effects past a 16 MB keyframe budget are left out with a note); the payload suite did not detonate the new output forms.
+- 2026-10-14: M6 runs before the rest of M5. Raster frames skip the whole-file re-sanitise: checked once per export, each frame's style text-checked. Security review: nothing critical, high or medium; the per-frame input is now a branded type and a raster frame is detonated in the payload suite. No font embedding, because uploads keep no fonts.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
