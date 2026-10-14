@@ -24,6 +24,8 @@
     overlap: (n) => `A later effect animates ${shapes(n)} at the same time. The later one plays.`,
     squeezed: () => "Runs past the end of the timeline, so it's been shortened.",
     outside: () => 'Starts after the timeline ends, so it never plays.',
+    unpainted: (n) => `${has(n)} nothing to recolour.`,
+    painted: (n) => `${shapes(n)} ${n === 1 ? 'uses' : 'use'} a gradient or pattern, which Colour shift can't change yet.`,
     'too-big': (n) => `Too much animation to fit in one file, so ${shapes(n)} won't move. Try fewer shapes or longer runs.`,
   };
 

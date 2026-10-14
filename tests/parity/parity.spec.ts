@@ -77,6 +77,13 @@ const SCENARIOS: { name: string; loop?: boolean; effects: Draft[] }[] = [
       },
     ],
   },
+  {
+    name: 'colour shift on a fill and a group of strokes',
+    effects: [
+      { type: 'colour', labels: ['dot'], params: { property: 'fill', to: '#3355ff' }, timing: { duration: 1.5 } },
+      { type: 'colour', labels: ['pair'], params: { property: 'stroke', to: '#22aa44' }, timing: { duration: 2 } },
+    ],
+  },
   { name: 'a timeline that plays once', loop: false, effects: [{ type: 'fade', labels: ['dot', 'nested'], params: { from: 0.1, to: 1 }, timing: { duration: 2 } }] },
 ];
 
