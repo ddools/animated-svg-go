@@ -12,7 +12,7 @@ export const DrawParams = z.object({
 });
 
 /** The target if it is a shape, or every shape drawn inside a group. */
-function shapesOf(key: string, inventory: InventoryView): string[] {
+export function shapesOf(key: string, inventory: InventoryView): string[] {
   const node = inventory.nodes.get(key)!;
   if (node.type !== 'g') return [key];
   return node.children.flatMap((child) => (inventory.nodes.get(child)!.referenced ? [] : shapesOf(child, inventory)));
@@ -23,10 +23,10 @@ export const draw: EffectModule<'draw'> = {
   label: 'Draw',
   params: DrawParams,
   ui: [
-    { key: 'from', label: 'From', min: 0, max: 100, step: 1, unit: '%' },
-    { key: 'to', label: 'To', min: 0, max: 100, step: 1, unit: '%' },
+    { kind: 'range', key: 'from', label: 'From', min: 0, max: 100, step: 1, unit: '%' },
+    { kind: 'range', key: 'to', label: 'To', min: 0, max: 100, step: 1, unit: '%' },
   ],
-  transform: false,
+  pivot: false,
   compile({ targets, params }, inventory) {
     const tracks: LocalTrack[] = [];
     const notes: LocalNote[] = [];

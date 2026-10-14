@@ -3,7 +3,7 @@ import { compile, easingCss, planRuns, springPoints, staggerOrder } from '../../
 import { ease } from '../../src/core/ir/evaluate';
 import type { InventoryView } from '../../src/core/ir/types';
 import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
-import { newEffect, newSpec, type Easing, type Effect, type Spec, type Timing } from '../../src/core/spec/schema';
+import { EFFECTS, newEffect, newSpec, SpecSchema, type Easing, type Effect, type Spec, type Timing } from '../../src/core/spec/schema';
 
 type Fake = Partial<InventoryNode> & Partial<Measured> & { key: string };
 
@@ -206,6 +206,21 @@ describe('compile', () => {
     const ir = compile(spec([late]), inventory({ key: 'a' }));
     expect(ir.tracks).toEqual([]);
     expect(ir.notes).toEqual([{ effect: late.id, code: 'outside', targets: ['a'] }]);
+  });
+});
+
+describe('effect modules', () => {
+  it('start new effects with their own timing, and refuse runs faster than their minimum', () => {
+    Object.assign(EFFECTS.fade, { timing: { direction: 'alternate', iterations: 'infinite' }, minDuration: 0.5 });
+    try {
+      const fade = newEffect('fade', ['a'], 'f');
+      expect(fade.timing).toMatchObject({ start: 0, duration: 1, direction: 'alternate', iterations: 'infinite' });
+      expect(SpecSchema.safeParse(spec([fade])).success).toBe(true);
+      expect(SpecSchema.safeParse(spec([{ ...fade, timing: { ...fade.timing, duration: 0.3 } }])).success).toBe(false);
+    } finally {
+      delete EFFECTS.fade.timing;
+      delete EFFECTS.fade.minDuration;
+    }
   });
 });
 

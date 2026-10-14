@@ -54,7 +54,16 @@ export const SpecSchema = z.object({
   /** Seconds. */
   duration: z.number().min(0.1).max(60),
   loop: z.boolean(),
-  effects: z.array(EffectSchema).max(200),
+  effects: z
+    .array(EffectSchema)
+    .max(200)
+    // Here, not on EffectSchema: EFFECTS' type is built from Effect, so checking it there is circular.
+    .superRefine((effects, context) =>
+      effects.forEach((effect, i) => {
+        if (effect.timing.duration < (EFFECTS[effect.type].minDuration ?? 0))
+          context.addIssue({ code: 'custom', message: 'Runs too fast for this effect.', path: [i, 'timing', 'duration'] });
+      }),
+    ),
 });
 
 export type Easing = z.infer<typeof EasingSchema>;
@@ -63,16 +72,24 @@ export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = Effect['type'];
 export type Spec = z.infer<typeof SpecSchema>;
 
-/** A slider in the generated control panel. */
-export type Control = { key: string; label: string; min: number; max: number; step: number; unit: string };
+/** A control in the generated panel, for one key of an effect's params. */
+export type Control = { key: string; label: string } & (
+  | { kind: 'range'; min: number; max: number; step: number; unit: string }
+  | { kind: 'select'; options: { value: string; label: string }[] }
+  | { kind: 'colour' }
+);
 
 export type EffectModule<T extends EffectType> = {
   type: T;
   label: string;
   params: z.ZodType<Extract<Effect, { type: T }>['params']>;
   ui: Control[];
-  /** Moves the wrapper, so it has a pivot. */
-  transform: boolean;
+  /** Rotates or scales about a point in each target, so it shows a pivot handle. */
+  pivot: boolean;
+  /** Timing a new effect starts with, over the shared defaults. */
+  timing?: Partial<Timing>;
+  /** Seconds. The shortest run allowed, for effects that would flash (WCAG 2.3.1). */
+  minDuration?: number;
   /** One run per target. Targets are known to exist in the inventory. */
   compile(effect: Extract<Effect, { type: T }>, inventory: InventoryView): { tracks: LocalTrack[]; notes: LocalNote[] };
 };
@@ -89,6 +106,13 @@ export function newEffect(type: EffectType, targets: string[], id: string): Effe
     type,
     targets,
     params: EFFECTS[type].params.parse({}),
-    timing: { start: 0, duration: 1, easing: { kind: 'cubic', p: [0.42, 0, 0.58, 1] }, iterations: 1, direction: 'normal' },
+    timing: {
+      start: 0,
+      duration: 1,
+      easing: { kind: 'cubic', p: [0.42, 0, 0.58, 1] },
+      iterations: 1,
+      direction: 'normal',
+      ...structuredClone(EFFECTS[type].timing),
+    },
   } as Effect;
 }

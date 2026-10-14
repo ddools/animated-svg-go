@@ -112,26 +112,58 @@
   {#if active && module}
     <div class="flex flex-col gap-2" role="group" aria-label={`${module.label} settings`}>
       {#each module.ui as control (control.key)}
-        {@const value = (active.params as Record<string, number>)[control.key]}
-        <label class="flex flex-col gap-1">
-          <span class="flex justify-between">{control.label} <span>{value}{control.unit}</span></span>
-          <input
-            type="range"
-            class="range range-xs"
-            min={control.min}
-            max={control.max}
-            step={control.step}
-            {value}
-            oninput={(event) => {
-              const next = number(event);
-              drag((effect) => void ((effect.params as Record<string, number>)[control.key] = next));
-            }}
-            onchange={() => project.settle()}
-          />
-        </label>
+        {@const params = active.params as Record<string, number | string>}
+        {#if control.kind === 'range'}
+          <label class="flex flex-col gap-1">
+            <span class="flex justify-between">{control.label} <span>{params[control.key]}{control.unit}</span></span>
+            <input
+              type="range"
+              class="range range-xs"
+              min={control.min}
+              max={control.max}
+              step={control.step}
+              value={params[control.key]}
+              oninput={(event) => {
+                const next = number(event);
+                drag((effect) => void ((effect.params as Record<string, unknown>)[control.key] = next));
+              }}
+              onchange={() => project.settle()}
+            />
+          </label>
+        {:else if control.kind === 'select'}
+          <label class="flex items-center justify-between gap-2">
+            {control.label}
+            <select
+              class="select select-xs w-40"
+              value={params[control.key]}
+              onchange={(event) => {
+                const next = event.currentTarget.value;
+                edit((effect) => void ((effect.params as Record<string, unknown>)[control.key] = next));
+              }}
+            >
+              {#each control.options as option (option.value)}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </label>
+        {:else}
+          <label class="flex items-center justify-between gap-2">
+            {control.label}
+            <input
+              type="color"
+              class="h-6 w-12 cursor-pointer"
+              value={params[control.key]}
+              oninput={(event) => {
+                const next = event.currentTarget.value;
+                drag((effect) => void ((effect.params as Record<string, unknown>)[control.key] = next));
+              }}
+              onchange={() => project.settle()}
+            />
+          </label>
+        {/if}
       {/each}
 
-      {#if module.transform}
+      {#if module.pivot}
         {@const pivot = active.pivot ?? { fx: 0.5, fy: 0.5 }}
         {#each [['fx', 'Pivot across'], ['fy', 'Pivot down']] as const as [axis, label] (axis)}
           <label class="flex flex-col gap-1">
@@ -174,7 +206,7 @@
         <input
           type="range"
           class="range range-xs"
-          min="0.05"
+          min={module.minDuration ?? 0.05}
           max={project.spec.duration}
           step="0.05"
           value={active.timing.duration}

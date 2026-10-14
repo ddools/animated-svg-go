@@ -11,8 +11,8 @@ export const spin: EffectModule<'spin'> = {
   type: 'spin',
   label: 'Spin',
   params: SpinParams,
-  ui: [{ key: 'degrees', label: 'Angle', min: -1080, max: 1080, step: 15, unit: '°' }],
-  transform: true,
+  ui: [{ kind: 'range', key: 'degrees', label: 'Angle', min: -1080, max: 1080, step: 15, unit: '°' }],
+  pivot: true,
   compile({ targets, params, pivot = { fx: 0.5, fy: 0.5 } }, inventory) {
     const tracks = targets.map((target) => {
       const box = inventory.measure(target)?.bbox ?? { x: 0, y: 0, width: 0, height: 0 };

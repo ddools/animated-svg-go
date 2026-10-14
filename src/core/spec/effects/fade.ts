@@ -15,10 +15,10 @@ export const fade: EffectModule<'fade'> = {
   label: 'Fade',
   params: FadeParams,
   ui: [
-    { key: 'from', label: 'From', min: 0, max: 1, step: 0.05, unit: '' },
-    { key: 'to', label: 'To', min: 0, max: 1, step: 0.05, unit: '' },
+    { kind: 'range', key: 'from', label: 'From', min: 0, max: 1, step: 0.05, unit: '' },
+    { kind: 'range', key: 'to', label: 'To', min: 0, max: 1, step: 0.05, unit: '' },
   ],
-  transform: false,
+  pivot: false,
   compile({ targets, params }) {
     const tracks = targets.map((target) => ({
       target,
