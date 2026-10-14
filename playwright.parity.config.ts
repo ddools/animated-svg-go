@@ -7,7 +7,8 @@ export default defineConfig({
   testMatch: ['parity/**/*.spec.ts'],
   timeout: 120_000,
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Linux Chromium antialiases text subpixel in an <img> but greyscale on a canvas. macOS, the only target, never does subpixel.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], launchOptions: { args: ['--disable-lcd-text'] } } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
 });
