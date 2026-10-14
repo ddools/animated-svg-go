@@ -112,20 +112,20 @@ Done. Merged in PR #7.
 
 ## Stage 5. Effects catalogue and controls (M5)
 
-Plan approved 14 Oct. Contracts merged in PR #10. Decided with Der: Colour shift is solid colours only (gradient cloning moves to ROADMAP Later), and Stagger is a setting on any effect, not an effect type.
+Done. Merged in PRs #10, #13 and #14. Decided with Der: Colour shift is solid colours only (gradient cloning moves to ROADMAP Later), and Stagger is a setting on any effect, not an effect type.
 
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
 | 0 | Contracts: stacked transforms, spring to `linear()`, stagger, fill and stroke tracks, select and colour controls | Opus | `security-reviewer` | ✓ PR #10. Nothing critical, high or medium; two lows fixed (a compile budget, payload coverage) |
-| 1 | Pop, Float, Wiggle, Pulse, Slide in. One run each, in parallel worktrees | `effect-builder` | Opus reviews each diff |  |
-| 2 | Colour shift, solid colours. Gradient and pattern paint gets a note | Opus | | Partly. Fill and stroke tracks and their export check are in PR #10; the effect is not built |
-| 3 | Stagger, as a setting on any effect. Each target planned on its own | Opus | | Partly. Built in compile in PR #10, with parity; no panel controls yet |
-| 4 | Easing picker: presets, cubic-bezier editor, spring to `linear()` | Sonnet | Opus reviews the spring sampler | Partly. Opus built the spring sampler and `linear()` evaluation in PR #10, with parity; the picker UI is not built |
-| 5 | Timeline bars, shuffle with stored seed | Sonnet | |  |
-| 6 | Keyboard support. Autoplay respects reduced motion | Sonnet | |  |
-| 7 | Fixtures, effect copy, docs | Haiku | |  |
-| 8 | Parity and corpus smoke test per effect | `corpus-runner` | |  |
-| 9 | Try every effect in all three browsers | Der | Sign-off |  |
+| 1 | Pop, Float, Wiggle, Pulse, Slide in. One run each, in parallel worktrees | `effect-builder` | Opus reviews each diff | ✓ PR #13. All five passed review; Opus then shared one pivot helper between them |
+| 2 | Colour shift, solid colours. Gradient and pattern paint gets a note | Opus | | ✓ PR #13 |
+| 3 | Stagger, as a setting on any effect. Each target planned on its own | Opus | | ✓ Compile in PR #10, panel controls in PR #14 |
+| 4 | Easing picker: presets, cubic-bezier editor, spring to `linear()` | Sonnet | Opus reviews the spring sampler | ✓ Opus built the spring sampler in PR #10; the picker is in PR #14 |
+| 5 | Timeline bars, shuffle with stored seed | Sonnet | | ✓ PR #14 |
+| 6 | Keyboard support. Autoplay respects reduced motion | Sonnet | | ✓ PR #14. Opus review fixed layer-tree keys also driving playback |
+| 7 | Fixtures, effect copy, docs | Haiku | | ✓ Folded into PRs #10, #13 and #14 (Opus and the builders); Haiku was not used |
+| 8 | Parity and corpus smoke test per effect | `corpus-runner` | | ✓ 17 parity scenarios; new effects smoke test in `pnpm corpus`, 66/66 files in both engines. Opus ran them; `corpus-runner` was not used |
+| 9 | Try every effect in all three browsers | Der | Sign-off | ✓ |
 
 ## Stage 6. GIF and MP4 export (M6, risk 4)
 
