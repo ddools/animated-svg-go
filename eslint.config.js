@@ -12,4 +12,9 @@ export default defineConfig(
   // Large sets live in $state.raw and are replaced, never mutated, so SvelteSet would only add cost.
   { rules: { 'no-undef': 'off', 'svelte/prefer-svelte-reactivity': 'off' } },
   { files: ['**/*.svelte', '**/*.svelte.ts'], languageOptions: { parserOptions: { parser: ts.parser } } },
+  // Zod must be configured before any schema is built. See src/core/spec/zod.ts.
+  {
+    ignores: ['src/core/spec/zod.ts'],
+    rules: { 'no-restricted-imports': ['error', { paths: [{ name: 'zod', message: 'Import z from src/core/spec/zod.ts.', allowTypeImports: true }] }] },
+  },
 );

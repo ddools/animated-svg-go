@@ -1,5 +1,5 @@
 // Scales the wrapper up to full size about a pivot baked into every keyframe (invariant 4). The overshoot comes from the spring easing.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { EffectModule } from '../schema';
 import { around } from './spin';

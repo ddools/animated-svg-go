@@ -1,5 +1,5 @@
 // The pattern for transform effects: they move the wrapper, about a pivot baked into every keyframe (invariant 4).
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { InventoryView } from '../../ir/types';
 import type { Effect, EffectModule } from '../schema';

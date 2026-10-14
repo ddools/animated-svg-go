@@ -1,5 +1,5 @@
 // A translate has no pivot, so nothing to bake. Moves the wrapper (invariant 3).
-import { z } from 'zod';
+import { z } from '../zod';
 import { num } from '../../ir/format';
 import type { EffectModule } from '../schema';
 

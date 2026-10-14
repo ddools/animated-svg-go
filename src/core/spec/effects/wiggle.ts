@@ -1,5 +1,5 @@
 // Rocks the wrapper about the pivot. Same swings every time for a seed; stagger gives targets their variety.
-import { z } from 'zod';
+import { z } from '../zod';
 import { num, random } from '../../ir/format';
 import type { EffectModule } from '../schema';
 import { around } from './spin';
