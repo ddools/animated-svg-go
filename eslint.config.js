@@ -9,6 +9,7 @@ export default defineConfig(
   ts.configs.recommended,
   svelte.configs.recommended,
   // TypeScript checks undefined names, and knows the browser globals.
-  { rules: { 'no-undef': 'off' } },
+  // Large sets live in $state.raw and are replaced, never mutated, so SvelteSet would only add cost.
+  { rules: { 'no-undef': 'off', 'svelte/prefer-svelte-reactivity': 'off' } },
   { files: ['**/*.svelte', '**/*.svelte.ts'], languageOptions: { parserOptions: { parser: ts.parser } } },
 );
