@@ -147,6 +147,19 @@ test('keys type into fields instead of driving playback', async ({ page }) => {
   expect(await page.evaluate(() => window.__asg!.playback.playing)).toBe(false);
 });
 
+test('keys the layer tree uses do not also drive playback', async ({ page }) => {
+  await open(page);
+  await addEffect(page);
+  await page.evaluate(() => {
+    window.__asg!.playback.pause();
+    window.__asg!.playback.seek(1);
+  });
+  await page.getByRole('treeitem').first().focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Space');
+  expect(await page.evaluate(() => [window.__asg!.playback.playing, window.__asg!.playback.time])).toEqual([false, 1]);
+});
+
 test('adding an effect starts playing', async ({ page }) => {
   await open(page);
   expect(await page.evaluate(() => window.__asg!.playback.playing)).toBe(false);

@@ -40,7 +40,8 @@
 
   /** Space, arrows, Home and End drive the playhead. Not while typing, choosing, or on a button or slider that uses the key. */
   function transport(event: KeyboardEvent) {
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    // The layer tree and the curve handles use these keys themselves, and say so.
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
     const target = event.target as HTMLElement;
     const type = (target as HTMLInputElement).type;
     if (target.localName === 'select' || target.localName === 'textarea' || target.isContentEditable) return;

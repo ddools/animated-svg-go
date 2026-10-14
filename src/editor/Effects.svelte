@@ -20,15 +20,15 @@
   };
 
   const ORDERS = [
-    ['start', 'Top of the file first'],
-    ['end', 'Bottom first'],
+    ['start', 'File order'],
+    ['end', 'Reverse file order'],
     ['centre', 'From the centre'],
     ['random', 'Random'],
     ['x', 'Left to right'],
     ['y', 'Top to bottom'],
   ] as const;
 
-  const TYPES =Object.keys(EFFECTS) as EffectType[];
+  const TYPES = Object.keys(EFFECTS) as EffectType[];
   const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
   const module = $derived(active && EFFECTS[active.type]);
 
@@ -83,7 +83,7 @@
     });
   }
 
-  const number =(event: Event) => Number((event.currentTarget as HTMLInputElement).value);
+  const number = (event: Event) => Number((event.currentTarget as HTMLInputElement).value);
 </script>
 
 <section aria-labelledby="effects-heading" class="flex flex-col gap-2">
