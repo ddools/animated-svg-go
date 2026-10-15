@@ -187,3 +187,46 @@ test('adding stops at the effects cap, with a reason', async ({ page }) => {
   await expect(page.getByRole('button', { name: '+ Fade' })).toBeDisabled();
   await expect(page.getByText('200 effects is the most one file can hold.')).toBeVisible();
 });
+
+test('dragging or nudging a bar end sets the run length, one undo step per drag', async ({ page }) => {
+  await open(page);
+  await addEffect(page, 'Fade');
+  const handle = page.getByRole('slider', { name: 'Fade duration' });
+  const track = (await page.getByRole('list', { name: 'Effect bars' }).locator('li').boundingBox())!;
+  const box = (await handle.boundingBox())!;
+  const spec = await page.evaluate(() => window.__asg!.project.spec);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  // Halfway along the timeline: one run from start 0 lasts half the length.
+  await page.mouse.move(track.x + track.width * 0.3, box.y + 2);
+  await page.mouse.move(track.x + track.width / 2, box.y + 2);
+  await page.mouse.up();
+  expect((await effect(page)).timing.duration).toBeCloseTo(spec.duration / 2, 1);
+  await handle.press('ArrowRight');
+  expect((await effect(page)).timing.duration).toBeCloseTo(spec.duration / 2 + 0.05, 5);
+  await page.keyboard.press('ControlOrMeta+z');
+  await page.keyboard.press('ControlOrMeta+z');
+  expect((await effect(page)).timing.duration).toBe(spec.effects[0].timing.duration);
+});
+
+test('dragging a bar moves its start, and a click does not', async ({ page }) => {
+  await open(page);
+  await addEffect(page, 'Fade');
+  await page.evaluate(() => window.__asg!.project.edit((spec) => void (spec.effects[0].timing.duration = 0.5)));
+  const bar = page.getByRole('list', { name: 'Effect bars' }).getByRole('button', { name: /^Fade/ });
+  const track = (await page.getByRole('list', { name: 'Effect bars' }).locator('li').boundingBox())!;
+  const past = await page.evaluate(() => window.__asg!.project.past.length);
+  await bar.click();
+  expect((await effect(page)).timing.start).toBe(0);
+  expect(await page.evaluate(() => window.__asg!.project.past.length)).toBe(past);
+  const box = (await bar.boundingBox())!;
+  const duration = await page.evaluate(() => window.__asg!.project.spec.duration);
+  await page.mouse.move(box.x + 5, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 5 + track.width * 0.1, box.y + 2);
+  await page.mouse.move(box.x + 5 + track.width * 0.25, box.y + 2);
+  await page.mouse.up();
+  expect((await effect(page)).timing.start).toBeCloseTo(duration / 4, 1);
+  expect((await effect(page)).timing.duration).toBe(0.5);
+  expect(await page.evaluate(() => window.__asg!.project.past.length)).toBe(past + 1);
+});
