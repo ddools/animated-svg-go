@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src=".github/readme/demo.svg" width="480" alt="A night sky scene: sun rays spin, the sun pulses, a cloud floats, a green hill line draws itself and a pink star wiggles.">
+  <img src="public/demo.svg" width="480" alt="A night sky scene: sun rays spin, the sun pulses, a cloud floats, a green hill line draws itself and a pink star wiggles.">
   <br>
   <sub>This image is a real export. Five shapes, five effects, about a minute in the editor. 4 KB of plain SVG and CSS.</sub>
 </p>

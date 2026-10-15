@@ -1,45 +1,214 @@
 ---
 import Page from '../layouts/Page.astro';
+
+const effects = ['Spin', 'Fade', 'Draw', 'Pop', 'Float', 'Wiggle', 'Pulse', 'Slide in', 'Colour shift'];
+const exports = [
+  ['SVG', 'One animated file, with its CSS inside. Works in an img tag.'],
+  ['CSS', 'SVG and CSS to paste into a page.'],
+  ['JS', 'SVG and a few lines of JavaScript.'],
+  ['GIF', 'For chat, slides and email.'],
+  ['MP4', 'For video editors and socials.'],
+];
 ---
 
 <Page description="Drop in an SVG, animate its parts with sliders and export animated SVG, CSS, JS, GIF or MP4. Free, no sign-up, and your file never leaves your browser.">
-  <div class="flex flex-col gap-10">
-    <section class="flex flex-col items-start gap-4">
-      <img src="/icon.svg" width="96" height="96" alt="" />
-      <h1 class="text-4xl font-bold">Animated SVG GO</h1>
-      <p class="text-2xl font-bold">Drop in an SVG. Make it move. Export it.</p>
-      <p class="text-lg">
-        Pick the shapes you want. Add a spin, a fade, a line that draws itself. Tune it with sliders, then take it anywhere. No code, no
-        account, no upload.
-      </p>
-      <a class="btn btn-primary" href="/editor">Open the editor</a>
+  <div class="flex flex-col gap-20">
+    <section class="from-secondary/25 to-accent/25 dark:from-secondary/10 dark:to-accent/10 grid items-center gap-10 rounded-[2rem] bg-linear-to-br via-transparent p-8 md:grid-cols-2 md:p-12">
+      <div class="flex flex-col items-start gap-5">
+        <h1 class="text-5xl font-black tracking-tight">Animated SVG GO</h1>
+        <p class="text-2xl font-bold text-balance">Drop in an SVG. <span class="text-primary">Make it move.</span> Export it.</p>
+        <p class="text-lg">
+          Pick the shapes you want. Add a spin, a fade, a line that draws itself. Tune it with sliders, then take it anywhere. No code, no
+          account, no upload.
+        </p>
+        <a class="btn btn-primary btn-lg rounded-full px-8" href="/editor">Open the editor</a>
+      </div>
+      <img
+        class="w-full rotate-1 rounded-3xl shadow-xl"
+        src="/demo.svg"
+        width="480"
+        height="240"
+        alt="A night sky made with the editor: sun rays spin, the sun pulses, a cloud floats, a hill line draws itself and a star wiggles."
+      />
     </section>
 
-    <section aria-labelledby="effects-heading" class="flex flex-col gap-2">
-      <h2 id="effects-heading" class="text-xl font-bold">Nine effects</h2>
-      <p>Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in and Colour shift. Stagger them, pick an easing, drag the pivot, scrub the timeline.</p>
-    </section>
-
-    <section aria-labelledby="exports-heading" class="flex flex-col gap-2">
-      <h2 id="exports-heading" class="text-xl font-bold">Five ways out</h2>
-      <ul class="list-disc pl-6">
-        <li>An animated SVG file, with its CSS inside.</li>
-        <li>SVG and CSS to paste into a page.</li>
-        <li>SVG and a few lines of JavaScript.</li>
-        <li>A GIF.</li>
-        <li>An MP4.</li>
+    <section aria-labelledby="effects-heading" class="grid items-center gap-10 md:grid-cols-2">
+      <div class="flex flex-col gap-3">
+        <h2 id="effects-heading" class="text-3xl font-black tracking-tight">Nine effects</h2>
+        <p class="text-lg">Stack them, stagger them, pick an easing, drag the pivot and scrub the timeline.</p>
+      </div>
+      <ul class="grid grid-cols-3 gap-3">
+        {
+          effects.map((name) => (
+            <li class="bg-base-200 flex flex-col items-center gap-2 rounded-2xl p-4 text-sm font-semibold">
+              <svg class="fx size-10 overflow-visible" data-fx={name} viewBox="0 0 40 40" aria-hidden="true">
+                {name === 'Draw' ? (
+                  <path d="M4 28c8-16 14-16 18-4s10 10 14-8" pathLength="1" fill="none" stroke-width="5" stroke-linecap="round" />
+                ) : name === 'Wiggle' ? (
+                  <path d="m20 3 5 11 12 1-9 8 3 12-11-7-11 7 3-12-9-8 12-1z" />
+                ) : name === 'Spin' ? (
+                  <rect x="7" y="7" width="26" height="26" rx="7" />
+                ) : (
+                  <circle cx="20" cy="20" r="14" />
+                )}
+              </svg>
+              {name}
+            </li>
+          ))
+        }
       </ul>
-      <p>The SVG, CSS and JavaScript exports stop moving for anyone who has asked their system for less motion.</p>
     </section>
 
-    <section aria-labelledby="private-heading" class="flex flex-col gap-2">
-      <h2 id="private-heading" class="text-xl font-bold">Your files stay with you</h2>
-      <p>Everything happens in your browser. Nothing you drop in is sent anywhere. <a class="link" href="/privacy">How we handle privacy</a>.</p>
+    <section aria-labelledby="exports-heading" class="flex flex-col gap-6">
+      <div class="flex flex-col gap-3">
+        <h2 id="exports-heading" class="text-3xl font-black tracking-tight">Five ways out</h2>
+        <p class="text-lg">The SVG, CSS and JavaScript exports stop moving for anyone who has asked their system for less motion.</p>
+      </div>
+      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {
+          exports.map(([format, text]) => (
+            <li class="bg-base-200 flex flex-col items-start gap-3 rounded-2xl p-5">
+              <span class="badge badge-primary font-bold">{format}</span>
+              {text}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section aria-labelledby="private-heading" class="bg-neutral text-neutral-content flex flex-col gap-3 rounded-[2rem] p-8 md:p-12">
+      <h2 id="private-heading" class="text-3xl font-black tracking-tight">Your files stay with you</h2>
+      <p class="text-lg">Everything happens in your browser. Nothing you drop in is sent anywhere. <a class="link" href="/privacy">How we handle privacy</a>.</p>
     </section>
 
     <p class="text-sm">
-      SVGOMG for motion. With thanks to <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a> and
-      <a class="link" href="https://github.com/svg/svgo">SVGO</a>, which tidies every file you drop in.
+      SVGOMG for motion. With thanks to <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a> and <a class="link" href="https://github.com/svg/svgo">SVGO</a>, which tidies every file you drop in.
     </p>
   </div>
 </Page>
+
+<style>
+  /* Each tile plays its own effect. Decoration only, so it stops for reduced motion. */
+  .fx {
+    fill: var(--color-primary);
+    stroke: var(--color-primary);
+    animation: 2s ease-in-out infinite alternate;
+  }
+  li:nth-child(3n + 2) .fx {
+    fill: var(--color-secondary);
+    stroke: var(--color-secondary);
+  }
+  li:nth-child(3n) .fx {
+    fill: var(--color-accent);
+    stroke: var(--color-accent);
+  }
+  .fx[data-fx='Draw'] {
+    fill: none;
+  }
+  .fx[data-fx='Spin'] {
+    animation: spin 2s linear infinite;
+  }
+  .fx[data-fx='Fade'] {
+    animation-name: fade;
+  }
+  .fx[data-fx='Draw'] path {
+    stroke-dasharray: 1;
+    animation: draw 2s ease-in-out infinite alternate;
+  }
+  .fx[data-fx='Pop'] {
+    animation: pop 2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  }
+  .fx[data-fx='Float'] {
+    animation-name: float;
+  }
+  .fx[data-fx='Wiggle'] {
+    animation: wiggle 1s ease-in-out infinite;
+  }
+  .fx[data-fx='Pulse'] {
+    animation: pulse 1s ease-in-out infinite alternate;
+  }
+  .fx[data-fx='Slide in'] {
+    animation: slide 2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+  .fx[data-fx='Colour shift'] {
+    animation: shift 3s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+  @keyframes fade {
+    to {
+      opacity: 0.15;
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes pop {
+    0% {
+      scale: 0;
+    }
+    40%,
+    100% {
+      scale: 1;
+    }
+  }
+  @keyframes float {
+    to {
+      translate: 0 -8px;
+    }
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    25% {
+      rotate: 14deg;
+    }
+    75% {
+      rotate: -14deg;
+    }
+  }
+  @keyframes pulse {
+    to {
+      scale: 1.2;
+    }
+  }
+  @keyframes slide {
+    0% {
+      translate: -24px 0;
+      opacity: 0;
+    }
+    50%,
+    100% {
+      translate: 0 0;
+      opacity: 1;
+    }
+  }
+  @keyframes shift {
+    0%,
+    100% {
+      fill: var(--color-primary);
+    }
+    33% {
+      fill: var(--color-secondary);
+    }
+    66% {
+      fill: var(--color-accent);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fx,
+    .fx path {
+      animation: none;
+    }
+  }
+</style>
