@@ -14,17 +14,18 @@
 </script>
 
 {#if compact}
-  <label class="btn btn-sm">
+  <label class="btn btn-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-2">
     Open another file
-    <input type="file" accept=".svg,image/svg+xml" class="hidden" onchange={pick} />
+    <!-- sr-only, not hidden: a hidden input takes no focus, so the keyboard could never open a file. -->
+    <input type="file" accept=".svg,image/svg+xml" class="sr-only" onchange={pick} />
   </label>
 {:else}
   <div class="grid h-full place-items-center p-6">
-    <label class="border-base-300 hover:border-primary flex w-full max-w-xl cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed p-12 text-center">
+    <label class="border-base-300 hover:border-primary has-focus-visible:border-primary has-focus-visible:outline-2 has-focus-visible:outline-offset-2 flex w-full max-w-xl cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed p-12 text-center">
       <span class="text-2xl font-bold">Drop an SVG here</span>
       <span>Or click to choose one. You can paste too.</span>
       <span class="text-sm opacity-70">Your file never leaves your browser.</span>
-      <input type="file" accept=".svg,image/svg+xml" class="hidden" onchange={pick} />
+      <input type="file" accept=".svg,image/svg+xml" class="sr-only" onchange={pick} />
     </label>
     <!-- Offered, never automatic: a file that hangs the tab must not reload itself forever. -->
     {#await savedProject() then project}

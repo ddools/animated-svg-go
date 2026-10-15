@@ -185,6 +185,8 @@
       {@const index = first + offset}
       {@const key = row.node.key}
       {@const isSelected = selection.keys.has(key)}
+      <!-- Inside a hidden layer. Dimmed once, not twice, so the text still passes 4.5:1. -->
+      {@const dimmed = hiddenAbove(row.node)}
       <!-- The tree handles keys for every row (roving tabindex). -->
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
@@ -210,21 +212,21 @@
         style:top="{index * ROW}px"
         style:height="{ROW}px"
         style:padding-left="{row.depth * 14 + 4}px"
-        class:opacity-50={hiddenAbove(row.node)}
+        class:opacity-70={dimmed}
       >
         {#if row.kids}
           <button
             type="button"
             tabindex="-1"
             aria-hidden="true"
-            class="w-4 shrink-0 text-xs opacity-70"
+            class="grid size-6 shrink-0 place-items-center text-xs opacity-70"
             onclick={(event) => {
               event.stopPropagation();
               setExpanded(key, !expanded.has(key));
             }}>{expanded.has(key) ? '▾' : '▸'}</button
           >
         {:else}
-          <span class="w-4 shrink-0"></span>
+          <span class="w-6 shrink-0"></span>
         {/if}
         {#if renaming === key}
           <input
@@ -243,14 +245,14 @@
           />
         {:else}
           <span class="truncate" title="Double-click or press F2 to rename" ondblclick={() => (renaming = key)} role="presentation">{name(row.node)}</span>
-          <span class="ml-auto shrink-0 font-mono text-xs opacity-60">{row.node.type}{row.kids ? ` · ${row.kids}` : ''}</span>
+          <span class="ml-auto shrink-0 font-mono text-xs" class:opacity-60={!isSelected && !dimmed}>{row.node.type}{row.kids ? ` · ${row.kids}` : ''}</span>
         {/if}
         <!-- Not a tab stop: the tree takes H for the focused row. -->
         <button
           type="button"
           tabindex="-1"
-          class="shrink-0 rounded p-0.5"
-          class:opacity-40={!hidden.has(key)}
+          class="grid size-6 shrink-0 place-items-center rounded"
+          class:opacity-60={!hidden.has(key)}
           class:hover:opacity-100={!hidden.has(key)}
           aria-label={hidden.has(key) ? `Show ${name(row.node)}` : `Hide ${name(row.node)}`}
           aria-pressed={hidden.has(key)}

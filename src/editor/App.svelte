@@ -128,8 +128,8 @@
         </nav>
         <div class="flex min-h-0 flex-col">
           <div role="tablist" class="tabs tabs-border tabs-sm border-base-300 border-b px-4">
-            <button type="button" role="tab" class="tab" class:tab-active={view === 'image'} aria-selected={view === 'image'} onclick={() => (view = 'image')}>Image</button>
-            <button type="button" role="tab" class="tab" class:tab-active={view === 'markup'} aria-selected={view === 'markup'} onclick={() => (view = 'markup')}>Markup</button>
+            <button type="button" role="tab" class="tab text-base-content/80" class:tab-active={view === 'image'} aria-selected={view === 'image'} onclick={() => (view = 'image')}>Image</button>
+            <button type="button" role="tab" class="tab text-base-content/80" class:tab-active={view === 'markup'} aria-selected={view === 'markup'} onclick={() => (view = 'markup')}>Markup</button>
           </div>
           <div class="canvas relative min-h-0 flex-1 p-6" data-testid="canvas">
             <div class="relative h-full">
