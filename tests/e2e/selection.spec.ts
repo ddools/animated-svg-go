@@ -52,7 +52,7 @@ test('the layer tree lists what is drawn, by name, and opens groups', async ({ p
   const tree = page.getByRole('tree', { name: 'Layers' });
   await expect(tree.getByRole('treeitem')).toHaveText([/Shapes\s*g · 3/, /More\s*g · 2/]);
   // The chevron is hidden from assistive tech: keyboard users expand with the arrow keys.
-  await tree.getByRole('treeitem', { name: 'Shapes' }).locator('button').click();
+  await tree.getByRole('treeitem', { name: 'Shapes' }).getByText('▸').click();
   await expect(tree.getByRole('treeitem')).toHaveText([/Shapes/, /red-a\s*rect/, /red-b/, /blue\s*circle/, /More/]);
   // Content in <defs> is drawn by reference, not in place.
   await expect(tree.getByRole('treeitem', { name: 'spare' })).toHaveCount(0);
