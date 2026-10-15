@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Bars from './Bars.svelte';
   import DropZone from './DropZone.svelte';
   import LayerTree from './LayerTree.svelte';
@@ -11,6 +12,7 @@
   import * as sampler from '../core/backends/sampler';
   import * as snippet from '../core/backends/snippet';
   import * as frames from '../core/export/frames';
+  import { registerAgentTools } from './agent';
   import { loadFile, loadText } from './load';
   import { mount } from './sandbox';
   import { normaliseFile } from './pipeline';
@@ -36,6 +38,9 @@
       bench: async (options) => (await import('./bench')).bench(options),
     };
   }
+
+  // Tools for AI agents in the browser, where WebMCP is supported.
+  onMount(registerAgentTools);
 
   // Autosave. save() reads the spec, so this runs again on every change.
   $effect(() => {

@@ -48,7 +48,7 @@ src/
   pages/                    Astro pages (landing, editor, about, privacy)
   layouts/                  Page.astro, the shared shell for every page but the editor
   components/               Astro components. Head.astro holds the shared title, SEO and icon tags.
-  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Export, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts
+  editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Export, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts, formats.ts (text exports), agent.ts (WebMCP tools)
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
     parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts, inventory.ts
     spec/                   schema.ts (Zod), effects/<effect>.ts (schema + compile per effect)
