@@ -12,7 +12,7 @@ test('ids and every local reference form get the prefix', () => {
   expect(rewriteRefs('fill', 'URL(#grad)', p)).toBe('URL(#a1b2-grad)');
   expect(rewriteRefs('style', 'fill:url("#a");mask:url(#b)', p)).toBe('fill:url("#a1b2-a");mask:url(#a1b2-b)');
   expect(rewriteRefs('aria-labelledby', 'title  desc', p)).toBe('a1b2-title a1b2-desc');
-  for (const name of ['aria-owns', 'aria-controls', 'aria-activedescendant', 'aria-details', 'aria-errormessage', 'aria-flowto']) {
+  for (const name of ['aria-owns', 'aria-controls', 'aria-activedescendant', 'aria-details', 'aria-errormessage', 'aria-flowto', 'aria-actions']) {
     expect(rewriteRefs(name, 'main-nav', p)).toBe('a1b2-main-nav');
   }
 });

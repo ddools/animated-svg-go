@@ -10,7 +10,7 @@ const ANIMATABLE = new Set([
 export const REFERENCED = 'defs, symbol, clipPath, mask, pattern, marker';
 // Every ARIA attribute that names IDs. Unprefixed, aria-owns in an inline export could pull a host page element into the drawing (M7 security review).
 const ID_LIST_ATTRS = new Set([
-  'aria-labelledby', 'aria-describedby', 'aria-owns', 'aria-controls', 'aria-activedescendant', 'aria-details', 'aria-errormessage', 'aria-flowto',
+  'aria-labelledby', 'aria-describedby', 'aria-owns', 'aria-controls', 'aria-activedescendant', 'aria-details', 'aria-errormessage', 'aria-flowto', 'aria-actions',
 ]);
 // Matches up to and including the "#", so the prefix is inserted and nothing is re-tokenised.
 const LOCAL_URL_START = /url\(\s*['"]?#/gi;
