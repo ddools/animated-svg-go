@@ -129,7 +129,9 @@ Done. Merged in PRs #10, #13 and #14. Decided with Der: Colour shift is solid co
 
 ## Stage 6. GIF and MP4 export (M6, risk 4)
 
-Plan approved 14 Oct. Started alongside the Stage 5 effects: raster export reads only the IR, so it never waited on them. Built on `feat/m6-raster`.
+Plan approved 14 Oct. Started alongside the Stage 5 effects: raster export reads only the IR, so it never waited on them. Built on `feat/m6-raster`, merged in #18.
+
+Status: built, measured and tested. Waiting on Der for items 6 and 9.
 
 Approved decisions:
 
@@ -138,7 +140,7 @@ Approved decisions:
 - Stream, hold nothing: one canvas, each frame straight into the encoder.
 - Frame loop on the main thread with yielding and an `AbortSignal`.
 - Mediabunny pinned at 1.60.0, H.264, `canEncodeVideo` check, GIF as the fallback. gifenc 1.0.3, quantised on the main thread at 720 px or less.
-- Placeholder caps of 1080 px wide, 10 s and 300 frames until item 7.
+- Placeholder caps of 1080 px wide, 10 s and 300 frames until item 7. Item 7 set them: 20 s (600 frames at 30 fps) for both formats, widths unchanged.
 
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
