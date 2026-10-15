@@ -1,5 +1,5 @@
-import { LIMITS, normalise, PipelineError, type Normalised } from '../core/parse';
-import type { PipelineErrorCode } from '../core/parse/limits';
+import { normalise, type Normalised } from '../core/parse';
+import { LIMITS, PipelineError, type PipelineErrorCode } from '../core/parse/limits';
 import type { Optimised } from '../core/parse/optimise';
 
 type Reply = ({ ok: true } & Optimised) | { ok: false; code: PipelineErrorCode; message: string };

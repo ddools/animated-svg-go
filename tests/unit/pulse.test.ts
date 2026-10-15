@@ -14,9 +14,7 @@ function inventory(): InventoryView {
     length: 60,
     fill: 'red',
     stroke: 'black',
-    strokeWidth: 1,
     dashed: false,
-    degenerate: false,
   };
   return { nodes: new Map([['a', node]]), measure: (key) => (key === 'a' ? measured : undefined) };
 }

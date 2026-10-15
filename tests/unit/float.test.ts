@@ -5,7 +5,7 @@ import type { InventoryNode, Measured } from '../../src/core/parse/inventory';
 import { newEffect, newSpec, type Effect } from '../../src/core/spec/schema';
 
 const node: InventoryNode = { key: 'a', type: 'rect', parent: null, children: [], referenced: false, wrapped: true, hasFilter: false };
-const measured: Measured = { bbox: { x: 0, y: 0, width: 10, height: 10 }, length: 40, fill: 'red', stroke: 'black', strokeWidth: 1, dashed: false, degenerate: false };
+const measured: Measured = { bbox: { x: 0, y: 0, width: 10, height: 10 }, length: 40, fill: 'red', stroke: 'black', dashed: false };
 const inventory: InventoryView = { nodes: new Map([['a', node]]), measure: () => measured };
 
 const make = (type: Effect['type'], params?: object) => ({ ...newEffect(type, ['a'], type), ...(params && { params }) }) as Effect;
