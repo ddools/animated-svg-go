@@ -41,11 +41,12 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/components/`, `public/` (icons, social card, robots.txt, sitemap.xml), `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/core/export/` (frames, gif, video), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/layouts/`, `src/components/`, `public/` (icons, social card, robots.txt, sitemap.xml), `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/core/export/` (frames, gif, video), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
-  pages/                    Astro pages (landing, editor, about)
+  pages/                    Astro pages (landing, editor, about, privacy)
+  layouts/                  Page.astro, the shared shell for every page but the editor
   components/               Astro components. Head.astro holds the shared title, SEO and icon tags.
   editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Export, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts, formats.ts (text exports), agent.ts (WebMCP tools)
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
@@ -114,4 +115,6 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - An authored `pathLength` rescales dash values. The inventory's `length` already accounts for it; use that, not `getTotalLength()`.
 - A `<label>` labels its first labelable descendant, and `<output>` counts. Don't put an `<output>` before the input inside a label: the slider loses its name.
 - Anything that compiles inside a Svelte `$effect` tracks the spec. Wrap one-off calls in `untrack`, or the drawing remounts on every edit.
+- Safari's Tab skips buttons and file inputs by default. Keyboard tests press Alt+Tab in WebKit. Never hide a file input with `display: none`: use `sr-only`.
+- daisyUI's secondary and accent fail text contrast. Don't use them for text.
 - Agent worktrees live in `.claude/worktrees/`. Lint, `tsc` and git ignore them.

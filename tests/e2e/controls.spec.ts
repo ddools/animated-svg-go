@@ -173,3 +173,17 @@ test('adding an effect does not autoplay under reduced motion', async ({ page })
   await addEffect(page);
   expect(await page.evaluate(() => window.__asg!.playback.playing)).toBe(false);
 });
+
+test('adding stops at the effects cap, with a reason', async ({ page }) => {
+  await open(page);
+  await addEffect(page);
+  await page.evaluate(() => {
+    const { project } = window.__asg!;
+    project.edit((spec) => {
+      const [first] = spec.effects;
+      spec.effects = Array.from({ length: 200 }, (_, i) => ({ ...first, id: `e${i}` }));
+    });
+  });
+  await expect(page.getByRole('button', { name: '+ Fade' })).toBeDisabled();
+  await expect(page.getByText('200 effects is the most one file can hold.')).toBeVisible();
+});

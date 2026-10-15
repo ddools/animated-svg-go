@@ -1,0 +1,36 @@
+---
+import Page from '../layouts/Page.astro';
+---
+
+<Page title="Privacy" description="Your files never leave your browser. What Animated SVG GO stores, and what it doesn't.">
+  <div class="flex flex-col gap-8">
+    <h1 class="text-3xl font-bold">Privacy</h1>
+    <p class="text-lg">Your files never leave your browser.</p>
+
+    <section aria-labelledby="never-heading" class="flex flex-col gap-2">
+      <h2 id="never-heading" class="text-xl font-bold">What we never do</h2>
+      <ul class="list-disc pl-6">
+        <li>Upload your files. Every step runs on your machine.</li>
+        <li>Ask for an account, a name or an email.</li>
+        <li>Use analytics, trackers or cookies.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="stored-heading" class="flex flex-col gap-2">
+      <h2 id="stored-heading" class="text-xl font-bold">What stays in your browser</h2>
+      <p>
+        The last file you opened, and its effects, are saved in this browser's own storage so they're there when you come back. Only this
+        browser on this machine can see them. Opening another file replaces them. To remove them, clear this site's data in your browser
+        settings.
+      </p>
+    </section>
+
+    <section aria-labelledby="hosting-heading" class="flex flex-col gap-2">
+      <h2 id="hosting-heading" class="text-xl font-bold">Hosting</h2>
+      <p>
+        The site is hosted by <a class="link" href="https://vercel.com/legal/privacy-policy">Vercel</a>. Like any web host, it keeps standard
+        request logs when you load a page, such as your IP address and browser. Your files are never in them, because they are never sent.
+      </p>
+    </section>
+  </div>
+</Page>

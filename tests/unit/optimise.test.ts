@@ -77,3 +77,9 @@ test('numbers, paths and colours are tidied, names are not', () => {
   expect(out).toContain('transform="translate(1 1)"');
   for (const name of ['id="0123"', 'data-name="1.50"', 'aria-label="007"', 'inkscape:label="2.000"', 'href="#0123"']) expect(out).toContain(name);
 });
+
+test('a file that entities expand past the size cap is refused', () => {
+  const bomb = `<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY a "${'A'.repeat(20_000)}">]><svg xmlns="http://www.w3.org/2000/svg"><text>${'&a;'.repeat(300)}</text></svg>`;
+  expect(bomb.length).toBeLessThan(30_000);
+  expect(() => run(bomb)).toThrow(expect.objectContaining({ code: 'too-large' }));
+});

@@ -1,26 +1,45 @@
 ---
-import '../styles/global.css';
-import Head from '../components/Head.astro';
+import Page from '../layouts/Page.astro';
 ---
 
-<!doctype html>
-<html lang="en-GB">
-  <head>
-    <Head
-      title="Animated SVG GO: animate any SVG in your browser"
-      description="Drop in an SVG, animate its parts with sliders and export animated SVG, CSS, JS, GIF or MP4. Free, no sign-up, and your file never leaves your browser."
-    />
-  </head>
-  <body class="grid min-h-screen place-items-center">
-    <main class="text-center">
-      <img class="mx-auto mb-6" src="/icon.svg" width="96" height="96" alt="" />
+<Page description="Drop in an SVG, animate its parts with sliders and export animated SVG, CSS, JS, GIF or MP4. Free, no sign-up, and your file never leaves your browser.">
+  <div class="flex flex-col gap-10">
+    <section class="flex flex-col items-start gap-4">
+      <img src="/icon.svg" width="96" height="96" alt="" />
       <h1 class="text-4xl font-bold">Animated SVG GO</h1>
-      <p class="py-4">Drop in an SVG. Make it move. Export it.</p>
-      <a class="btn btn-primary" href="/editor">Open the editor</a>
-      <p class="pt-8 text-sm opacity-70">
-        SVGOMG for motion. With thanks to <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a> and
-        <a class="link" href="https://github.com/svg/svgo">SVGO</a>, which tidy every file you drop in.
+      <p class="text-2xl font-bold">Drop in an SVG. Make it move. Export it.</p>
+      <p class="text-lg">
+        Pick the shapes you want. Add a spin, a fade, a line that draws itself. Tune it with sliders, then take it anywhere. No code, no
+        account, no upload.
       </p>
-    </main>
-  </body>
-</html>
+      <a class="btn btn-primary" href="/editor">Open the editor</a>
+    </section>
+
+    <section aria-labelledby="effects-heading" class="flex flex-col gap-2">
+      <h2 id="effects-heading" class="text-xl font-bold">Nine effects</h2>
+      <p>Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in and Colour shift. Stagger them, pick an easing, drag the pivot, scrub the timeline.</p>
+    </section>
+
+    <section aria-labelledby="exports-heading" class="flex flex-col gap-2">
+      <h2 id="exports-heading" class="text-xl font-bold">Five ways out</h2>
+      <ul class="list-disc pl-6">
+        <li>An animated SVG file, with its CSS inside.</li>
+        <li>SVG and CSS to paste into a page.</li>
+        <li>SVG and a few lines of JavaScript.</li>
+        <li>A GIF.</li>
+        <li>An MP4.</li>
+      </ul>
+      <p>The SVG, CSS and JavaScript exports stop moving for anyone who has asked their system for less motion.</p>
+    </section>
+
+    <section aria-labelledby="private-heading" class="flex flex-col gap-2">
+      <h2 id="private-heading" class="text-xl font-bold">Your files stay with you</h2>
+      <p>Everything happens in your browser. Nothing you drop in is sent anywhere. <a class="link" href="/privacy">How we handle privacy</a>.</p>
+    </section>
+
+    <p class="text-sm">
+      SVGOMG for motion. With thanks to <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a> and
+      <a class="link" href="https://github.com/svg/svgo">SVGO</a>, which tidies every file you drop in.
+    </p>
+  </div>
+</Page>

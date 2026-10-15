@@ -160,14 +160,16 @@ Nothing parked.
 
 ## Stage 7. Hardening and launch (M7)
 
+Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/playwright`, skip the Fable review, Opus builds items 3 to 5, privacy gets its own page.
+
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
-| 1 | Full security review, upload to export. Re-run payloads | `security-reviewer` | Must pass |  |
-| 2 | Fix what the review finds | Opus | |  |
-| 3 | Performance caps with friendly messages | Sonnet | |  |
-| 4 | Accessibility pass, WCAG 2.2 AA | Sonnet | Opus reviews |  |
-| 5 | Landing, about and privacy pages | Sonnet builds, Haiku drafts copy | Der edits the copy |  |
-| 6 | Optional whole-architecture review | Fable | Der decides whether to run it |  |
+| 1 | Full security review, upload to export. Re-run payloads | `security-reviewer` | Must pass | ✓ Nothing critical or high. One medium (entity expansion past the size cap), three lows. Payloads 354 passed in Chromium and WebKit. Production build has no test hook. DOMPurify 3.4.17 is the latest, `pnpm audit` clean |
+| 2 | Fix what the review finds | Opus (Opus builds) | | ✓ All four fixed with tests. Re-review closed them and found one more low (`aria-actions`), also fixed |
+| 3 | Performance caps with friendly messages | Opus (Der's call) | | ✓ Effects stop at 200 with a reason. Preview measured at the caps: cost follows drawing size, so files over 5,000 shapes get a note. Numbers in ARCHITECTURE section 1 |
+| 4 | Accessibility pass, WCAG 2.2 AA | Opus (Der's call) | Opus reviews | ✓ axe on every page and editor state, both schemes. Fixed: keyboard could not open a file, five contrast failures, small tree targets. Keyboard-only test, open to export |
+| 5 | Landing, about and privacy pages | Opus builds and drafts copy (Der's call) | Der edits the copy |  |
+| 6 | Optional whole-architecture review | Fable | Der decides whether to run it | Skipped: Der's call, 15 Oct |
 | 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off |  |
 
 ## What only Der can do

@@ -27,6 +27,9 @@ export const payloads: Record<string, string> = {
   ),
   'spoofed export scope': svg('<g data-asg="sdeadbeef"><rect width="5" height="5"/></g>'),
 
+  // Size: entities expand inside the optimiser, so a small file can outgrow the cap
+  'entity expansion past the size cap': `<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY a "${'A'.repeat(20_000)}">]>${svg(`<text>${'&a;'.repeat(300)}</text>`)}`,
+
   // Event handlers
   'onload on root': svg('<rect/>', 'onload="alert(1)"'),
   'onload uppercase': svg('<rect/>', 'ONLOAD="alert(1)"'),

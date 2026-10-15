@@ -10,6 +10,9 @@
     'style-dropped': "Some of the file's CSS could not be kept: media queries, animations or fonts.",
   };
 
+  // Measured in M7: past this, preview in headless Chromium drops below 30 fps. See ARCHITECTURE section 1.
+  const BUSY = 5000;
+
   const inventory = $derived(editor.inventory!);
   const result = $derived(editor.result!);
   const nodes = $derived([...inventory.nodes.values()]);
@@ -34,6 +37,7 @@
     const filtered = shown.filter((node) => node.hasFilter).length;
     if (images) out.push(`${images} embedded ${images === 1 ? 'image' : 'images'}. Pixels can blur when scaled or rotated.`);
     if (texts) out.push(`${texts} text ${texts === 1 ? 'element uses' : 'elements use'} installed fonts. Exports may look different on machines without them.`);
+    if (nodes.length > BUSY) out.push(`${nodes.length.toLocaleString('en-GB')} shapes. Preview can stutter on a file this big. GIF and MP4 frames are not affected.`);
     if (filtered) out.push(`${filtered} ${filtered === 1 ? 'element has' : 'elements have'} a filter. Filters can be slow to animate.`);
     return out;
   });
