@@ -92,6 +92,9 @@
   }
 
   function paste(event: ClipboardEvent) {
+    // A paste into a text field is the field's. Without this, pasting markup into a layer name replaced the drawing.
+    const target = event.target as HTMLElement;
+    if (target.localName === 'input' || target.localName === 'textarea' || target.isContentEditable) return;
     const file = event.clipboardData?.files[0];
     if (file) return void loadFile(file);
     const text = event.clipboardData?.getData('text/plain') ?? '';

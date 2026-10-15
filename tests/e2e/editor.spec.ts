@@ -51,6 +51,21 @@ test('a dropped file and pasted SVG text both load', async ({ page }) => {
   await expect(page.getByText('Pasted SVG')).toBeVisible();
 });
 
+test('pasting markup into a text field leaves the drawing alone', async ({ page }) => {
+  await open(page);
+  await page.getByRole('treeitem', { name: 'Layer one' }).press('F2');
+  const field = page.getByRole('textbox', { name: 'Layer name' });
+  await field.evaluate((input, text) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    const event = new ClipboardEvent('paste', { bubbles: true });
+    Object.defineProperty(event, 'clipboardData', { value: data });
+    input.dispatchEvent(event);
+  }, SIMPLE);
+  await expect(field).toBeVisible();
+  expect(await page.evaluate(() => window.__asg!.editor.fileName)).toBe('simple.svg');
+});
+
 test('bad files get a plain explanation', async ({ page }) => {
   await page.goto('/editor');
   const input = page.locator('input[type=file]');
