@@ -1,4 +1,6 @@
 import type { InventoryNode } from '../core/parse/inventory';
+import type { Effect } from '../core/spec/schema';
+import { project } from './project.svelte';
 import { editor } from './state.svelte';
 
 class Selection {
@@ -29,10 +31,21 @@ export function visibleNodes(): InventoryNode[] {
   return [...(editor.inventory?.nodes.values() ?? [])].filter((node) => !node.referenced);
 }
 
+/** A node's children that are drawn in place. */
+export function visibleChildren(node: InventoryNode): string[] {
+  const nodes = editor.inventory!.nodes;
+  return node.children.filter((key) => !nodes.get(key)!.referenced);
+}
+
 /** Visible shapes with no visible children: what a click on the canvas can land on. */
 export function leafNodes(): InventoryNode[] {
-  const nodes = editor.inventory!.nodes;
-  return visibleNodes().filter((node) => !node.children.some((key) => !nodes.get(key)!.referenced));
+  return visibleNodes().filter((node) => !visibleChildren(node).length);
+}
+
+/** Shows an effect's controls and selects what it animates. */
+export function chooseEffect(effect: Effect) {
+  project.active = effect.id;
+  selection.set(effect.targets);
 }
 
 function selected(): InventoryNode[] {

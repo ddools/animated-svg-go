@@ -16,9 +16,7 @@ function inventory(...fakes: Fake[]): InventoryView {
       bbox: { x: 0, y: 0, width: 10, height: 10 },
       fill: 'rgb(255, 0, 0)',
       stroke: 'none',
-      strokeWidth: 0,
       dashed: false,
-      degenerate: false,
       ...fake,
     });
   }

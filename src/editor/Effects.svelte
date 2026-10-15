@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { NoteCode } from '../core/ir/types';
   import { EFFECTS, newEffect, type Effect, type EffectType } from '../core/spec/schema';
+  import { CENTRE } from '../core/spec/effects/spin';
   import EasingPicker from './EasingPicker.svelte';
   import { playback } from './playback.svelte';
   import { project } from './project.svelte';
-  import { selection } from './selection.svelte';
+  import { chooseEffect, selection } from './selection.svelte';
 
   const has = (n: number) => (n === 1 ? '1 shape has' : `${n} shapes have`);
   const NOTES: Record<NoteCode, (n: number) => string> = {
@@ -31,7 +32,7 @@
   ] as const;
 
   const TYPES = Object.keys(EFFECTS) as EffectType[];
-  const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
+  const active = $derived(project.activeEffect);
   const module = $derived(active && EFFECTS[active.type]);
 
   function shapes(count: number) {
@@ -59,20 +60,8 @@
     if (project.active === id) project.active = null;
   }
 
-  function choose(effect: Effect) {
-    project.active = effect.id;
-    selection.set(effect.targets);
-  }
-
-  /** Changes the active effect. A drag is one undo step, settled on the change event. */
-  function drag(change: (effect: Effect) => void) {
-    const id = project.active;
-    project.drag((spec) => change(spec.effects.find((effect) => effect.id === id)!));
-  }
-  function edit(change: (effect: Effect) => void) {
-    const id = project.active;
-    project.edit((spec) => change(spec.effects.find((effect) => effect.id === id)!));
-  }
+  const drag = (change: (effect: Effect) => void) => project.editActive(change, 'drag');
+  const edit = (change: (effect: Effect) => void) => project.editActive(change);
 
   const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
@@ -109,7 +98,7 @@
               class="btn btn-sm flex-1 justify-start"
               class:btn-active={effect.id === project.active}
               aria-pressed={effect.id === project.active}
-              onclick={() => choose(effect)}
+              onclick={() => chooseEffect(effect)}
             >
               {EFFECTS[effect.type].label}
               <span class="opacity-60">{shapes(effect.targets.length)}</span>
@@ -181,7 +170,7 @@
       {/each}
 
       {#if module.pivot}
-        {@const pivot = active.pivot ?? { fx: 0.5, fy: 0.5 }}
+        {@const pivot = active.pivot ?? CENTRE}
         {#each [['fx', 'Pivot across'], ['fy', 'Pivot down']] as const as [axis, label] (axis)}
           <label class="flex flex-col gap-1">
             <span class="flex justify-between">{label} <span>{Math.round(pivot[axis] * 100)}%</span></span>
@@ -194,7 +183,7 @@
               value={pivot[axis] * 100}
               oninput={(event) => {
                 const next = number(event) / 100;
-                drag((effect) => void (effect.pivot = { ...(effect.pivot ?? { fx: 0.5, fy: 0.5 }), [axis]: next }));
+                drag((effect) => void (effect.pivot = { ...(effect.pivot ?? CENTRE), [axis]: next }));
               }}
               onchange={() => project.settle()}
             />

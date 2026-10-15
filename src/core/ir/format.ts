@@ -4,6 +4,9 @@ export function num(value: number): string {
   return String(rounded === 0 ? 0 : rounded);
 }
 
+/** A CSS property name as WAAPI spells it: stroke-dashoffset to strokeDashoffset. */
+export const camel = (property: string): string => property.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
+
 /** Numbers from 0 to 1 that are the same for the same seed every time (mulberry32). */
 export function random(seed: number): () => number {
   let state = seed >>> 0;

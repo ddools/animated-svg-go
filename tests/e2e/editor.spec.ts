@@ -92,7 +92,7 @@ test('the inventory describes structure up front and measures on demand', async 
     boxParentIsLayer: true,
     dotReferenced: true,
     // 10 x 20 at (5, 5), padded by half the 2 unit stroke.
-    box: { bbox: { x: 4, y: 4, width: 12, height: 22 }, length: 60, fill: 'rgb(255, 0, 0)', stroke: 'rgb(0, 0, 255)', strokeWidth: 2, dashed: false, degenerate: false },
+    box: { bbox: { x: 4, y: 4, width: 12, height: 22 }, length: 60, fill: 'rgb(255, 0, 0)', stroke: 'rgb(0, 0, 255)', dashed: false },
     lineLength: 100,
   });
 });

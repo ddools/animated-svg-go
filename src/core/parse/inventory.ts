@@ -1,7 +1,7 @@
 // What the editor knows about each animatable element. Built from the live, rendered tree,
 // because geometry needs layout. Structure is read up front; geometry is measured on first use.
 
-const REFERENCED = 'defs, symbol, clipPath, mask, pattern, marker';
+import { REFERENCED } from './rewrite';
 
 export type InventoryNode = {
   key: string;
@@ -25,9 +25,6 @@ export type Measured = {
   dashed: boolean;
   fill: string;
   stroke: string;
-  strokeWidth: number;
-  /** Nothing to see or pivot around. */
-  degenerate: boolean;
 };
 
 export type Inventory = {
@@ -96,8 +93,6 @@ export function buildInventory(root: SVGSVGElement, labels: Record<string, strin
       dashed: style.strokeDasharray !== 'none' && style.strokeDasharray !== '',
       fill: style.fill,
       stroke,
-      strokeWidth,
-      degenerate: box.width === 0 && box.height === 0,
     };
     cache.set(key, measured);
     return measured;

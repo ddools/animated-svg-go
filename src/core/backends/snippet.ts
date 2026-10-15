@@ -1,8 +1,7 @@
 // The two snippets: markup plus CSS to paste, or markup plus a small WAAPI script. See docs/ARCHITECTURE.md section 5.
+import { camel } from '../ir/format';
 import { ADDITIVE_PROPERTIES, type IR } from '../ir/types';
 import { checkValue, css, exportMarkup, scopeOf, selector } from './css';
-
-const camel = (property: string) => property.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
 
 /** Inline SVG and the CSS that animates it. The page must keep the data attributes and IDs. */
 export function cssSnippet(svg: string, ir: IR): { svg: string; css: string } {

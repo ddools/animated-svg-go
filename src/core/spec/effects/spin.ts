@@ -8,11 +8,14 @@ export const SpinParams = z.object({
   degrees: z.number().min(-1080).max(1080).default(360),
 });
 
+/** The pivot an effect starts with: the middle of each target's box. */
+export const CENTRE = { fx: 0.5, fy: 0.5 };
+
 /**
  * Wraps one transform function in translations to and from the pivot, so it acts about that point.
  * Every effect with a pivot uses this, so all their keyframes share one function-list shape.
  */
-export function around(target: string, pivot: Effect['pivot'] = { fx: 0.5, fy: 0.5 }, inventory: InventoryView): (op: string) => string {
+export function around(target: string, pivot: Effect['pivot'] = CENTRE, inventory: InventoryView): (op: string) => string {
   const box = inventory.measure(target)?.bbox ?? { x: 0, y: 0, width: 0, height: 0 };
   const [x, y] = [box.x + pivot.fx * box.width, box.y + pivot.fy * box.height];
   return (op) => `translate(${num(x)}px, ${num(y)}px) ${op} translate(${num(-x)}px, ${num(-y)}px)`;

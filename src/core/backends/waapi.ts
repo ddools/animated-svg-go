@@ -1,23 +1,11 @@
 // The live preview: the IR played with element.animate() inside the sandbox. See docs/ARCHITECTURE.md section 3.
 // Uses the DOM only when called, never at import.
+import { camel } from '../ir/format';
 import { ADDITIVE_PROPERTIES, WRAPPER_PROPERTIES, type IR, type Track } from '../ir/types';
 
-export type Preview = {
-  /** Brings the running animations in line with the IR, keeping time and play state. */
-  apply(ir: IR): void;
-  /** Seconds. */
-  seek(seconds: number): void;
-  play(): void;
-  pause(): void;
-  /** Seconds into the timeline. */
-  time(): number;
-  playing(): boolean;
-  destroy(): void;
-};
+export type Preview = ReturnType<typeof createPreview>;
 
 type Target = { root: SVGSVGElement; elementFor(key: string): Element | undefined };
-
-const camel = (property: string) => property.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
 
 /** Transform and opacity move the wrapper. Paint and dashes go on the element (invariant 3). */
 function targetOf(sandbox: Target, track: Track): Element | undefined {
@@ -27,7 +15,7 @@ function targetOf(sandbox: Target, track: Track): Element | undefined {
   return wrapper?.hasAttribute('data-anim') ? wrapper : undefined;
 }
 
-export function createPreview(sandbox: Target): Preview {
+export function createPreview(sandbox: Target) {
   // The one clock. It has no keyframes, so it changes nothing, and it keeps time even with no effects.
   const clock = sandbox.root.animate([], { duration: 1000, iterations: Infinity, fill: 'both' });
   clock.pause();
@@ -39,7 +27,8 @@ export function createPreview(sandbox: Target): Preview {
   const now = () => (clock.currentTime as number | null) ?? 0;
 
   return {
-    apply(ir) {
+    /** Brings the running animations in line with the IR, keeping time and play state. */
+    apply(ir: IR) {
       duration = ir.duration;
       iterations = ir.iterations === 'infinite' ? Infinity : 1;
       const timing = { duration: duration * 1000, iterations, fill: 'both' as const };
@@ -76,7 +65,7 @@ export function createPreview(sandbox: Target): Preview {
         live.delete(id);
       }
     },
-    seek(seconds) {
+    seek(seconds: number) {
       for (const animation of all()) animation.currentTime = seconds * 1000;
     },
     play() {
@@ -88,6 +77,7 @@ export function createPreview(sandbox: Target): Preview {
       const time = now();
       for (const animation of live.values()) animation.currentTime = time;
     },
+    /** Seconds into the timeline. */
     time() {
       const seconds = now() / 1000;
       return iterations === Infinity ? seconds % duration : Math.min(seconds, duration);

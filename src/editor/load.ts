@@ -1,5 +1,4 @@
-import { LIMITS, PipelineError } from '../core/parse';
-import type { PipelineErrorCode } from '../core/parse/limits';
+import { LIMITS, PipelineError, type PipelineErrorCode } from '../core/parse/limits';
 import { normaliseFile } from './pipeline';
 import { project } from './project.svelte';
 import type { Spec } from '../core/spec/schema';

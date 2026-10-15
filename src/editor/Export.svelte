@@ -1,3 +1,11 @@
+<script lang="ts" module>
+  export function bytes(n: number) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  }
+</script>
+
 <script lang="ts">
   import { animatedSvg } from '../core/backends/css';
   import { cssSnippet, jsSnippet } from '../core/backends/snippet';
@@ -109,12 +117,6 @@
       controller.abort();
     };
   });
-
-  function bytes(n: number) {
-    if (n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / 1024 / 1024).toFixed(1)} MB`;
-  }
 
   function save(blob: Blob, extension: string) {
     const url = URL.createObjectURL(blob);

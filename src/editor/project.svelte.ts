@@ -1,6 +1,6 @@
 import { get, set } from 'idb-keyval';
 import type { InventoryNode } from '../core/parse/inventory';
-import { newSpec, SpecSchema, type Spec } from '../core/spec/schema';
+import { newSpec, SpecSchema, type Effect, type Spec } from '../core/spec/schema';
 
 // The spec is the only document state (invariant 5). Undo keeps whole snapshots:
 // a spec is a few KB, so structuredClone is cheaper to reason about than patches.
@@ -67,6 +67,20 @@ class Project {
     this.past = [];
     this.future = [];
     this.#dragBase = null;
+  }
+
+  /** The effect whose controls are showing, if it still exists. */
+  get activeEffect(): Effect | undefined {
+    return this.spec.effects.find((effect) => effect.id === this.active);
+  }
+
+  /** Changes the active effect. A drag is one undo step, settled on release. */
+  editActive(change: (effect: Effect) => void, mode: 'edit' | 'drag' = 'edit') {
+    const id = this.active;
+    this[mode]((spec) => {
+      const effect = spec.effects.find((e) => e.id === id);
+      if (effect) change(effect);
+    });
   }
 
   /** What the layer is called: the user's name, then the file's label, then its tag. */

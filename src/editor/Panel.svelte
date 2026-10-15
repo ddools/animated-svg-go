@@ -3,7 +3,7 @@
   import { project } from './project.svelte';
   import { editor } from './state.svelte';
   import Effects from './Effects.svelte';
-  import Export from './Export.svelte';
+  import Export, { bytes } from './Export.svelte';
 
   const WARNINGS: Record<string, string> = {
     'no-size': 'The file has no width, height or viewBox, so it is shown at 300 × 150.',
@@ -49,10 +49,6 @@
   function round(value: number) {
     return Math.round(value * 10) / 10;
   }
-
-  function size(bytes: number) {
-    return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
-  }
 </script>
 
 <div class="flex flex-col gap-6 p-4 text-sm">
@@ -83,11 +79,11 @@
     <h2 id="file-heading" class="font-bold">File</h2>
     <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1" data-testid="file-info">
       <dt class="opacity-70">Original</dt>
-      <dd>{size(editor.originalBytes)}</dd>
+      <dd>{bytes(editor.originalBytes)}</dd>
       <dt class="opacity-70">Prepared for animation</dt>
-      <dd>{size(normalisedBytes)}</dd>
+      <dd>{bytes(normalisedBytes)}</dd>
       <dt class="opacity-70">Gzipped</dt>
-      <dd>{gzipBytes === null ? '…' : size(gzipBytes)}</dd>
+      <dd>{gzipBytes === null ? '…' : bytes(gzipBytes)}</dd>
       <dt class="opacity-70">Shapes and groups</dt>
       <dd>{shown.length}</dd>
       <dt class="opacity-70">Defined for reuse</dt>

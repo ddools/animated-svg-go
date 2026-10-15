@@ -3,11 +3,11 @@ import { toUserUnits } from './units';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export const ANIMATABLE = new Set([
+const ANIMATABLE = new Set([
   'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image', 'use', 'g',
 ]);
 // Content here is referenced, not rendered in place. Stamped, never wrapped.
-const NO_WRAP_ANCESTORS = 'defs, symbol, clipPath, mask, pattern, marker';
+export const REFERENCED = 'defs, symbol, clipPath, mask, pattern, marker';
 const ID_LIST_ATTRS = new Set(['aria-labelledby', 'aria-describedby']);
 // Matches up to and including the "#", so the prefix is inserted and nothing is re-tokenised.
 const LOCAL_URL_START = /url\(\s*['"]?#/gi;
@@ -81,7 +81,7 @@ function wrap(stamped: Element[], root: Element): void {
   const doc = root.ownerDocument;
   for (const element of stamped) {
     const parent = element.parentElement;
-    if (!parent || element.closest(NO_WRAP_ANCESTORS)) continue;
+    if (!parent || element.closest(REFERENCED)) continue;
     // <switch> picks its first direct child that passes the conditional tests.
     // A wrapper would always pass and change which branch renders.
     if (parent.localName === 'switch') continue;

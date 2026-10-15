@@ -21,11 +21,8 @@
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(value * 100) / 100));
   const range = (index: number) => (index % 2 ? ([-5, 5] as const) : ([0, 1] as const));
 
-  /** Changes this effect's easing. A drag is one undo step, settled on release. */
-  function change(apply: (timing: Timing) => void, mode: 'edit' | 'drag' = 'edit') {
-    const id = effect.id;
-    project[mode]((spec) => apply(spec.effects.find((e) => e.id === id)!.timing));
-  }
+  /** Changes this effect's easing. It is always the active one. */
+  const change = (apply: (timing: Timing) => void, mode: 'edit' | 'drag' = 'edit') => project.editActive((e) => apply(e.timing), mode);
 
   /** Sets one control-point coordinate. */
   function setPoint(index: number, value: number, mode: 'edit' | 'drag' = 'edit') {

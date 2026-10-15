@@ -4,8 +4,6 @@ import type { Optimised } from './optimise';
 import { rewrite, type Warning } from './rewrite';
 import { sanitise } from './sanitise';
 
-export { LIMITS, PipelineError } from './limits';
-
 export type Normalised = {
   svg: string;
   /** data-k to human layer name. */

@@ -9,7 +9,7 @@ function inventory(...keys: string[]): InventoryView {
   const measured = new Map<string, Measured>();
   for (const key of keys) {
     nodes.set(key, { key, type: 'rect', parent: null, children: [], referenced: false, wrapped: true, hasFilter: false });
-    measured.set(key, { bbox: { x: 10, y: 20, width: 40, height: 10 }, length: 40, fill: 'red', stroke: 'black', strokeWidth: 1, dashed: false, degenerate: false });
+    measured.set(key, { bbox: { x: 10, y: 20, width: 40, height: 10 }, length: 40, fill: 'red', stroke: 'black', dashed: false });
   }
   return { nodes, measure: (key) => measured.get(key) };
 }

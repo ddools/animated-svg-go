@@ -2,7 +2,7 @@
   import { tick, untrack } from 'svelte';
   import type { InventoryNode } from '../core/parse/inventory';
   import { project } from './project.svelte';
-  import { selection } from './selection.svelte';
+  import { selection, visibleChildren } from './selection.svelte';
   import { editor } from './state.svelte';
 
   // Rows are a fixed height so only the visible ones need to exist. Map files put
@@ -22,10 +22,6 @@
   let list: HTMLDivElement;
 
   const inventory = $derived(editor.inventory!);
-
-  function visibleChildren(node: InventoryNode): string[] {
-    return node.children.filter((key) => !inventory.nodes.get(key)!.referenced);
-  }
 
   const rows = $derived.by(() => {
     const out: Row[] = [];

@@ -18,9 +18,7 @@ function inventory(...fakes: Fake[]): InventoryView {
       length: 40,
       fill: 'red',
       stroke: 'black',
-      strokeWidth: 1,
       dashed: false,
-      degenerate: false,
       ...fake,
     });
   }
