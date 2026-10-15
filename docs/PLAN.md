@@ -131,7 +131,7 @@ Done. Merged in PRs #10, #13 and #14. Decided with Der: Colour shift is solid co
 
 Plan approved 14 Oct. Started alongside the Stage 5 effects: raster export reads only the IR, so it never waited on them. Built on `feat/m6-raster`, merged in #18.
 
-Status: built, measured and tested. Waiting on Der for items 6 and 9.
+Status: done 15 Oct. Der read the copy and signed off exports in Chrome and Safari.
 
 Approved decisions:
 
@@ -149,10 +149,10 @@ Approved decisions:
 | 3 | Raster parity scenario, plus a `<text>` fixture (replaces font embedding) | Opus | | ✓ Every scenario matches in Chromium and WebKit |
 | 4 | MP4 through Mediabunny with capability detection | Opus (moved from Sonnet: Der's call) | | ✓ Read back with Mediabunny in Chromium and WebKit |
 | 5 | GIF through gifenc with a size estimate | Opus (moved from Sonnet: Der's call) | | ✓ Estimate within 3% headless |
-| 6 | Resolution, fps and background presets. Progress and cancel UI | Opus (moved from Sonnet: Der's call), copy included | Der reads the copy | Built. Waiting on Der's read of the copy |
+| 6 | Resolution, fps and background presets. Progress and cancel UI | Opus (moved from Sonnet: Der's call), copy included | Der reads the copy | ✓ Der read the copy, 15 Oct. No changes |
 | 7 | Bench hook. Measure 5 s, 30 fps at 720 and 1080 in Chrome and Safari | Opus builds, Der measures | Opus sets the caps from the numbers | ✓ Measured in Chrome and Safari. `MAX_SECONDS` 20 for both formats |
 | 8 | WebKit e2e and parity runs | `webkit-checker`, `corpus-runner` | | ✓ On 8a3dbaf. WebKit e2e 310 passed, 8 skipped by design (7 hostile files the pipeline refuses, WebKit clipboard). Parity 76/76 and corpus 270/270 in Chromium and WebKit, gate passed. Opus ran them directly; the subagents were not run |
-| 9 | Export a 5 s, 30 fps, 1080p MP4 and a GIF in Chrome and Safari | Der | Sign-off |  |
+| 9 | Export a 5 s, 30 fps, 1080p MP4 and a GIF in Chrome and Safari | Der | Sign-off | ✓ Signed off by Der, 15 Oct |
 
 ## Parked
 
