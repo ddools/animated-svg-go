@@ -259,6 +259,8 @@ GIF (`core/export/gif.ts`): each frame read back with `getImageData`, quantised 
 
 Measured headless on an M-series Mac, 200 shapes spinning and fading: a 5 s, 30 fps, 1920 × 1080 MP4 takes 3.7 s in Chromium and 7.1 s in WebKit (2.5 to 3.3 MB). A 5 s, 15 fps, 720 px GIF takes 2.7 to 3.0 s (2.5 MB), quantised on the main thread. The estimate came within 3% of the file; the bar is 25%.
 
+Bench: `window.__asg.bench({ seconds, fps })` (`editor/bench.ts`, test builds only) loads 200 rects, spins and fades them all for 5 s, then exports MP4 at 720 and 1080 wide and GIF at 480 and 720 wide at 30 fps. It returns and logs time, ms per frame, file size and the worst stall between animation frames while each ran. Headless on an M-series Mac: MP4 1.5 to 2.4 s in Chromium and about 3.4 s in WebKit, GIF 3.5 to 4.6 s in both. Worst stall 33 ms for MP4 in Chromium, 58 to 167 ms for GIF and in WebKit. Real Chrome and Safari numbers set the caps.
+
 Export panel: GIF offers 480 and 720 px wide, MP4 480, 720 and 1080; heights follow the viewBox, rounded to even. 15, 24 or 30 fps. A background colour, white by default. The GIF estimate reruns 400 ms after the settings or the animation stop changing. Where `canExportMp4` says no, the panel says so and points to GIF. The encoders are dynamic imports, loaded when their format is picked. Timelines over `MAX_SECONDS` (10, a placeholder until measured) can't be exported as GIF or MP4.
 
 Fonts: SVG-as-image can't fetch fonts. Nothing needs embedding: the pipeline drops `@font-face` and SVG fonts, so preview, SVG export and raster frames all use installed fonts. The file panel already warns about text.
