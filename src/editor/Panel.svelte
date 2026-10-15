@@ -1,5 +1,6 @@
 <script lang="ts">
   import { selectParents, selectSamePaint, selectSameType, selectSiblings, selection } from './selection.svelte';
+  import { project } from './project.svelte';
   import { editor } from './state.svelte';
   import Effects from './Effects.svelte';
   import Export from './Export.svelte';
@@ -42,7 +43,7 @@
     const [key] = selection.keys;
     const node = inventory.nodes.get(key)!;
     const box = inventory.measure(key)?.bbox;
-    return { name: node.label ?? node.type, type: node.type, size: box ? `${round(box.width)} × ${round(box.height)}` : '' };
+    return { name: project.nameOf(node), type: node.type, size: box ? `${round(box.width)} × ${round(box.height)}` : '' };
   });
 
   function round(value: number) {

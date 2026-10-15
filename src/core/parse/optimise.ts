@@ -1,4 +1,4 @@
-import { optimize, type Config, type CustomPlugin } from 'svgo/browser';
+import { optimize, type Config, type CustomPlugin, type XastElement } from 'svgo/browser';
 import { LIMITS, PipelineError } from './limits';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -34,6 +34,11 @@ const dropForeignElements: CustomPlugin = {
   },
 };
 
+/** Decimal places kept in numbers and path data. SVGOMG's default. */
+const PRECISION = 3;
+/** Attributes that are names, not numbers, even when they look like one. */
+const TEXT_ATTRIBUTE = /^(id|data-.*|aria-.*|.*:.*)$/;
+
 export type Optimised = {
   svg: string;
   /** CSS that could not be inlined (media queries, keyframes, @font-face) was thrown away. */
@@ -60,8 +65,28 @@ export function optimise(svg: string): Optimised {
     }),
   };
 
-  // Not preset-default: nothing here may merge paths, collapse groups, rename IDs,
-  // round numbers or drop editor labels. The rewrite pass depends on the structure.
+  // cleanupNumericValues rounds any attribute that looks like a number, so id="0123" would lose its
+  // leading zero and every reference to it. Text-like attributes are set aside around the safe set.
+  const kept = new Map<XastElement, Record<string, string>>();
+  const keepText: CustomPlugin = {
+    name: 'keepText',
+    fn: () => ({
+      element: {
+        enter: (node) => {
+          const text = Object.entries(node.attributes).filter(([name]) => TEXT_ATTRIBUTE.test(name));
+          if (text.length) kept.set(node, Object.fromEntries(text));
+        },
+      },
+    }),
+  };
+  const restoreText: CustomPlugin = {
+    name: 'restoreText',
+    fn: () => ({ element: { enter: (node) => void Object.assign(node.attributes, kept.get(node)) } }),
+  };
+
+  // Not preset-default: nothing here may add, remove, merge or reorder elements, rename IDs or drop
+  // editor labels. Keys come from each element's position, so the rewrite pass depends on the structure.
+  // The safe set below only rewrites values, after SVGOMG (https://github.com/jakearchibald/svgomg).
   const config: Config = {
     multipass: false,
     plugins: [
@@ -74,6 +99,15 @@ export function optimise(svg: string): Optimised {
       { name: 'inlineStyles', params: { onlyMatchedOnce: false, removeMatchedSelectors: true } },
       'convertStyleToAttrs',
       dropLeftoverStyles,
+      keepText,
+      'cleanupAttrs',
+      'removeEmptyAttrs',
+      'convertColors',
+      // Absolute units stay as written: units.ts reads them.
+      { name: 'cleanupNumericValues', params: { floatPrecision: PRECISION, convertToPx: false } },
+      // Transforms stay on the element. Folding them into the path would move its box and pivot.
+      { name: 'convertPathData', params: { floatPrecision: PRECISION, applyTransforms: false } },
+      restoreText,
     ],
   };
 

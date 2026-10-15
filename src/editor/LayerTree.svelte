@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
   import type { InventoryNode } from '../core/parse/inventory';
+  import { project } from './project.svelte';
   import { selection } from './selection.svelte';
   import { editor } from './state.svelte';
 
@@ -12,6 +13,9 @@
   type Row = { node: InventoryNode; depth: number; kids: number };
 
   let expanded = $state.raw<ReadonlySet<string>>(new Set());
+  /** Hidden in the preview only. Not in the spec, not in exports, gone with the next file. */
+  let hidden = $state.raw<ReadonlySet<string>>(new Set());
+  let renaming = $state<string | null>(null);
   let focused = $state(0);
   let scrollTop = $state(0);
   let viewport = $state(0);
@@ -41,8 +45,46 @@
   const first = $derived(Math.max(0, Math.floor(scrollTop / ROW) - OVERSCAN));
   const last = $derived(Math.min(rows.length, Math.ceil((scrollTop + viewport) / ROW) + OVERSCAN));
 
-  function name(node: InventoryNode): string {
-    return node.label ?? node.type;
+  const name = (node: InventoryNode) => project.nameOf(node);
+
+  function hiddenAbove(node: InventoryNode): boolean {
+    for (let key = node.parent; key; key = inventory.nodes.get(key)!.parent) if (hidden.has(key)) return true;
+    return false;
+  }
+
+  function toggleHidden(key: string) {
+    const next = new Set(hidden);
+    if (!next.delete(key)) next.add(key);
+    hidden = next;
+  }
+
+  // Visibility, not display: a hidden shape still measures, so its box and pivot stay right.
+  // The wrapper is ours, so the authored element is never touched.
+  // ponytail: a child with its own visibility="visible" still shows through a hidden group.
+  $effect(() => {
+    const sandbox = editor.sandbox;
+    if (!sandbox) return;
+    const targets: SVGElement[] = [];
+    for (const key of hidden) {
+      const element = sandbox.elementFor(key);
+      const target = inventory.nodes.get(key)?.wrapped ? element?.parentElement : element;
+      if (!(target instanceof sandbox.root.ownerDocument.defaultView!.SVGElement)) continue;
+      target.style.visibility = 'hidden';
+      targets.push(target);
+    }
+    return () => targets.forEach((target) => target.style.removeProperty('visibility'));
+  });
+
+  function finishRename(node: InventoryNode, value: string | null) {
+    if (renaming !== node.key) return;
+    renaming = null;
+    if (value !== null) project.rename(node, value);
+    void focusRow(focused);
+  }
+
+  function autofocus(input: HTMLInputElement) {
+    input.focus();
+    input.select();
   }
 
   function setExpanded(key: string, open: boolean) {
@@ -69,7 +111,7 @@
 
   function keydown(event: KeyboardEvent) {
     const row = rows[focused];
-    if (!row) return;
+    if (!row || event.metaKey || event.ctrlKey || event.altKey) return;
     const { key } = row.node;
     switch (event.key) {
       case 'ArrowDown':
@@ -95,6 +137,12 @@
       case 'Enter':
       case ' ':
         choose(key, event.shiftKey);
+        break;
+      case 'h':
+        toggleHidden(key);
+        break;
+      case 'F2':
+        renaming = key;
         break;
       default:
         return;
@@ -148,10 +196,11 @@
         aria-level={row.depth + 1}
         aria-selected={isSelected}
         aria-expanded={row.kids ? expanded.has(key) : undefined}
-        aria-label={name(row.node)}
+        aria-label={hidden.has(key) ? `${name(row.node)}, hidden` : name(row.node)}
         data-index={index}
         data-key={key}
         tabindex={index === focused ? 0 : -1}
+        onfocus={() => (focused = index)}
         onclick={(event) => {
           focused = index;
           choose(key, event.shiftKey || event.metaKey);
@@ -165,6 +214,7 @@
         style:top="{index * ROW}px"
         style:height="{ROW}px"
         style:padding-left="{row.depth * 14 + 4}px"
+        class:opacity-50={hiddenAbove(row.node)}
       >
         {#if row.kids}
           <button
@@ -180,8 +230,45 @@
         {:else}
           <span class="w-4 shrink-0"></span>
         {/if}
-        <span class="truncate">{name(row.node)}</span>
-        <span class="ml-auto shrink-0 font-mono text-xs opacity-60">{row.node.type}{row.kids ? ` · ${row.kids}` : ''}</span>
+        {#if renaming === key}
+          <input
+            use:autofocus
+            class="input input-xs text-base-content min-w-0 flex-1"
+            value={name(row.node)}
+            maxlength="100"
+            aria-label="Layer name"
+            onclick={(event) => event.stopPropagation()}
+            onkeydown={(event) => {
+              event.stopPropagation();
+              if (event.key === 'Enter') finishRename(row.node, event.currentTarget.value);
+              else if (event.key === 'Escape') finishRename(row.node, null);
+            }}
+            onblur={(event) => finishRename(row.node, event.currentTarget.value)}
+          />
+        {:else}
+          <span class="truncate" title="Double-click or press F2 to rename" ondblclick={() => (renaming = key)} role="presentation">{name(row.node)}</span>
+          <span class="ml-auto shrink-0 font-mono text-xs opacity-60">{row.node.type}{row.kids ? ` · ${row.kids}` : ''}</span>
+        {/if}
+        <!-- Not a tab stop: the tree takes H for the focused row. -->
+        <button
+          type="button"
+          tabindex="-1"
+          class="shrink-0 rounded p-0.5"
+          class:opacity-40={!hidden.has(key)}
+          class:hover:opacity-100={!hidden.has(key)}
+          aria-label={hidden.has(key) ? `Show ${name(row.node)}` : `Hide ${name(row.node)}`}
+          aria-pressed={hidden.has(key)}
+          title={hidden.has(key) ? 'Show in preview (H)' : 'Hide in preview (H)'}
+          onclick={(event) => {
+            event.stopPropagation();
+            toggleHidden(key);
+          }}
+        >
+          <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+            {#if hidden.has(key)}<path d="M3 3l18 18" />{:else}<circle cx="12" cy="12" r="3" />{/if}
+          </svg>
+        </button>
       </div>
     {/each}
   </div>

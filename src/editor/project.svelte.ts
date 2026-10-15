@@ -1,4 +1,5 @@
 import { get, set } from 'idb-keyval';
+import type { InventoryNode } from '../core/parse/inventory';
 import { newSpec, SpecSchema, type Spec } from '../core/spec/schema';
 
 // The spec is the only document state (invariant 5). Undo keeps whole snapshots:
@@ -66,6 +67,23 @@ class Project {
     this.past = [];
     this.future = [];
     this.#dragBase = null;
+  }
+
+  /** What the layer is called: the user's name, then the file's label, then its tag. */
+  nameOf(node: InventoryNode): string {
+    return this.spec.names?.[node.key] ?? node.label ?? node.type;
+  }
+
+  /** Undoable. An empty name, or the file's own, clears the user's. */
+  rename(node: InventoryNode, name: string) {
+    const trimmed = name.trim().slice(0, 100);
+    if (trimmed === this.nameOf(node)) return;
+    this.edit((spec) => {
+      const names = { ...spec.names };
+      if (trimmed && trimmed !== (node.label ?? node.type)) names[node.key] = trimmed;
+      else delete names[node.key];
+      spec.names = names;
+    });
   }
 
   /** Debounced. Reads the spec now, so an effect that calls it re-runs on every change. */

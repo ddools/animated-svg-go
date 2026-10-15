@@ -21,13 +21,13 @@
 </script>
 
 <!-- A fixed height, there before the first effect, so the drawing doesn't jump when one is added. -->
-<ul class="border-base-300 flex h-20 shrink-0 flex-col gap-1 overflow-y-auto border-t px-4 py-2 text-xs" aria-label="Effect bars">
+<ul class="border-base-300 flex h-28 shrink-0 flex-col gap-1 overflow-y-auto border-t px-4 py-2 text-xs" aria-label="Effect bars">
   {#if !project.spec.effects.length}
     <li class="opacity-60">Each effect shows here as a bar on the timeline.</li>
   {/if}
   {#each project.spec.effects as effect (effect.id)}
     {@const range = span(effect)}
-    <li class="bg-base-200 relative h-5 rounded">
+    <li class="bg-base-200 relative h-5 shrink-0 rounded">
       {#if range}
         <button
           type="button"

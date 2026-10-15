@@ -66,6 +66,8 @@ export const SpecSchema = z.object({
   /** Seconds. */
   duration: z.number().min(0.1).max(60),
   loop: z.boolean(),
+  /** Layer names the user typed, by key. Editor only: never exported, never compiled. */
+  names: z.record(key, z.string().min(1).max(100)).optional(),
   effects: z
     .array(EffectSchema)
     .max(200)
