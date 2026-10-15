@@ -168,9 +168,10 @@ Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/
 | 2 | Fix what the review finds | Opus (Opus builds) | | ✓ All four fixed with tests. Re-review closed them and found one more low (`aria-actions`), also fixed |
 | 3 | Performance caps with friendly messages | Opus (Der's call) | | ✓ Effects stop at 200 with a reason. Preview measured at the caps: cost follows drawing size, so files over 5,000 shapes get a note. Numbers in ARCHITECTURE section 1 |
 | 4 | Accessibility pass, WCAG 2.2 AA | Opus (Der's call) | Opus reviews | ✓ axe on every page and editor state, both schemes. Fixed: keyboard could not open a file, five contrast failures, small tree targets. Keyboard-only test, open to export |
-| 5 | Landing, about and privacy pages | Opus builds and drafts copy (Der's call) | Der edits the copy |  |
+| 5 | Landing, about and privacy pages | Opus builds and drafts copy (Der's call) | Der edits the copy | ✓ Merged in PR #28. Der happy with the copy for now, 15 Oct |
 | 6 | Optional whole-architecture review | Fable | Der decides whether to run it | Skipped: Der's call, 15 Oct |
 | 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off |  |
+| 8 | Lighter CI. Browser suites on PRs only, e2e split by engine, docs-only changes skip CI | Opus (Der's call, 15 Oct) | | ✓ Merges to main run lint, unit and the build guard. Decision log in ARCHITECTURE |
 
 ## What only Der can do
 
