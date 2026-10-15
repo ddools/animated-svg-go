@@ -106,7 +106,9 @@
 
 <div class="flex h-screen flex-col">
   <header class="border-base-300 flex items-center gap-4 border-b px-4 py-2">
-    <h1 class="text-lg font-bold">Animated SVG GO</h1>
+    <h1 class="flex items-center gap-2 text-lg font-bold">
+      <a href="/" class="contents"><img src="/icon.svg" width="24" height="24" alt="" />Animated SVG GO</a>
+    </h1>
     {#if editor.status === 'ready'}
       <span class="truncate text-sm opacity-70">{editor.fileName}</span>
       <span class="ml-auto flex gap-1">
