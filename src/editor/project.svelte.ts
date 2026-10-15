@@ -29,6 +29,13 @@ class Project {
     this.spec = this.#changed(change);
   }
 
+  /** A whole new spec, already validated. One undoable change. */
+  replace(spec: Spec) {
+    this.settle();
+    this.#record(this.spec);
+    this.spec = spec;
+  }
+
   /** A change mid-drag. The whole drag becomes one undo step when it settles. */
   drag(change: (spec: Spec) => void) {
     this.#dragBase ??= this.spec;
