@@ -131,7 +131,7 @@ test.describe('hostile files come out inert', () => {
       const out = await normalise(page, raw);
       // Refusing the file outright is a safe outcome.
       if (!out.ok) {
-        expect(['not-svg', 'too-many-elements']).toContain(out.code);
+        expect(['not-svg', 'too-many-elements', 'too-large']).toContain(out.code);
         return;
       }
       expect(await page.evaluate(inspect, { markup: out.svg })).toEqual([]);
@@ -276,6 +276,7 @@ test('only the expected payloads are refused outright', async ({ page }) => {
   }
   expect(refused).toEqual([
     'script svg prefix', // root element is not a plain <svg>
+    'entity expansion past the size cap', // over the size limit once entities are expanded
     'external entity', // SVGO's parser rejects it
     'use href with control character', // a control character is not legal XML
     'use expansion bomb', // over the expanded-shape limit

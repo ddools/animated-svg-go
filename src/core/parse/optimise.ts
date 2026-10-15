@@ -112,7 +112,11 @@ export function optimise(svg: string): Optimised {
   };
 
   try {
-    return { svg: optimize(svg, config).data, styleDropped };
+    const { data } = optimize(svg, config);
+    // Internal DTD entities are expanded here, so a small file can come out hundreds of times bigger (M7 security review).
+    // Checked in the worker, so the blown-up string is never posted to the main thread. Characters, not bytes: cheap, and close enough.
+    if (data.length > LIMITS.bytes) throw new PipelineError('too-large', `${data.length} characters once entities are expanded. The limit is ${LIMITS.bytes}.`);
+    return { svg: data, styleDropped };
   } catch (error) {
     if (error instanceof PipelineError) throw error;
     throw new PipelineError('not-svg', error instanceof Error ? error.message : String(error));
