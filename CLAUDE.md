@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M5 done, M6 built and awaiting Der's Safari checks. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 take timelines up to 20 s, measured in Chrome and Safari. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
+Status: M6 done. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 take timelines up to 20 s, measured in Chrome and Safari. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
 Owner: Der (Dermot Dooley). Mac for development and testing.
 

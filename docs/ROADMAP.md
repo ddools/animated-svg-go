@@ -94,6 +94,8 @@ Started before M5 finished (Der, 14 Oct). It reads only the IR, so it never wait
 
 Done when: a 5 s, 30 fps, 1080p MP4 exports in Chrome and Mac Safari without crashing, and GIF size estimates are within 25% of actual.
 
+Measured: done 15 Oct. Der exported a 5 s, 30 fps, 1080p MP4 and a GIF in Chrome and Safari. GIF estimates came within 3% headless. The bench in real Chrome and Safari set the length limit at 20 s for both formats. Fonts are not embedded: the pipeline drops `@font-face`, so every path uses installed fonts.
+
 ## M7. Hardening and launch
 
 Lead: Opus 5.5. Fable 5.1 optional for a final cross-cutting architecture review (see `docs/MODELS.md` for the caution on security work).
