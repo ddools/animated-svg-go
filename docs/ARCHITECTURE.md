@@ -50,6 +50,8 @@ Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s 
    - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, dash length for shapes (`pathLength` if set, else `getTotalLength()`), computed fill, stroke and stroke width, `dashed` (has its own `stroke-dasharray`), `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
    - Still to add when an effect needs them: closed path, `vector-effect`, heavy filter, `preserveAspectRatio="none"`, text that needs a font.
 
+Preview at the caps, measured in M7 (`tests/corpus/caps.spec.ts`, headless on an M-series Mac), 200 shapes spinning: Chromium 29 fps in a 5,000-shape drawing, 11 at 10,000, 5 at 20,000. WebKit 74, 58, 30. Cost follows the size of the drawing, not how many shapes move: 2,000 shapes all spinning in a 2,000-shape file runs at 41 and 71 fps. So there is no cap on animated shapes. Past 5,000 shapes the file panel says preview can stutter. Headless Chromium paints without the GPU; real Chrome is unmeasured.
+
 On top of the inventory, the editor's selection tools (same type, same fill, same stroke, siblings, parent) and the lasso work on visible nodes only. On the world map below they take 60 to 350 ms.
 
 Measured on the largest real corpus file (3.8 MB world map, 5,444 elements), from choosing the file to seeing it: 1.7 s in Chromium, 1.15 s in WebKit, headless on an M-series Mac with nothing else running.
@@ -359,3 +361,4 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
 - 2026-10-15: The optimiser tidies values as well as structure: colours, whitespace, empty attributes, numbers and path data to 3 decimal places. Element-changing plugins stay out, so keys and saved effects survive. Corpus gate unchanged.
 - 2026-10-15: Layer renames live in the spec (`names`), so they undo and autosave. Hiding a layer is preview-only view state.
+- 2026-10-15: M7 caps. The editor stops adding effects at the schema's 200, because a 201st made autosave restore drop every effect. No cap on animated shapes: preview cost follows drawing size, so files over 5,000 shapes get a stutter note instead of a refusal.
