@@ -2,6 +2,7 @@
   import Bars from './Bars.svelte';
   import DropZone from './DropZone.svelte';
   import LayerTree from './LayerTree.svelte';
+  import Markup from './Markup.svelte';
   import Overlay from './Overlay.svelte';
   import Panel from './Panel.svelte';
   import Sandbox from './Sandbox.svelte';
@@ -40,6 +41,8 @@
   $effect(() => {
     if (editor.status === 'ready') project.save();
   });
+
+  let view = $state<'image' | 'markup'>('image');
 
   const FRAME = 1 / 30;
 
@@ -120,11 +123,19 @@
           {/if}
         </nav>
         <div class="flex min-h-0 flex-col">
-          <div class="canvas min-h-0 flex-1 p-6" data-testid="canvas">
+          <div role="tablist" class="tabs tabs-border tabs-sm border-base-300 border-b px-4">
+            <button type="button" role="tab" class="tab" class:tab-active={view === 'image'} aria-selected={view === 'image'} onclick={() => (view = 'image')}>Image</button>
+            <button type="button" role="tab" class="tab" class:tab-active={view === 'markup'} aria-selected={view === 'markup'} onclick={() => (view = 'markup')}>Markup</button>
+          </div>
+          <div class="canvas relative min-h-0 flex-1 p-6" data-testid="canvas">
             <div class="relative h-full">
               <Sandbox result={editor.result} />
               {#if editor.inventory}<Overlay />{/if}
             </div>
+            <!-- Over the drawing, not instead of it: unmounting the sandbox would rebuild it on the way back. -->
+            {#if view === 'markup'}
+              <div class="bg-base-100 absolute inset-0 p-4"><Markup /></div>
+            {/if}
           </div>
           <Timeline />
           <Bars />
