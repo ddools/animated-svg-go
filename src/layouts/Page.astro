@@ -1,0 +1,49 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const links = [
+  ['/editor', 'Editor'],
+  ['/about', 'About'],
+  ['/privacy', 'Privacy'],
+];
+---
+
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title ? `${title} | Animated SVG GO` : 'Animated SVG GO'}</title>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <header class="border-base-300 border-b">
+      <nav class="mx-auto flex max-w-3xl items-center gap-4 px-6 py-3" aria-label="Site">
+        <a class="font-bold" href="/">Animated SVG GO</a>
+        <ul class="ml-auto flex gap-4 text-sm">
+          {
+            links.map(([href, label]) => (
+              <li>
+                <a class="link link-hover" href={href} aria-current={Astro.url.pathname === href ? 'page' : undefined}>
+                  {label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </header>
+    <main class="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+      <slot />
+    </main>
+    <footer class="border-base-300 border-t">
+      <p class="mx-auto max-w-3xl px-6 py-4 text-sm">Free. No accounts. Your files never leave your browser.</p>
+    </footer>
+  </body>
+</html>

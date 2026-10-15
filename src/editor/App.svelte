@@ -112,6 +112,10 @@
       </span>
       <DropZone compact />
     {/if}
+    <nav class="flex gap-3 text-sm" class:ml-auto={editor.status !== 'ready'} aria-label="Site">
+      <a class="link link-hover" href="/about">About</a>
+      <a class="link link-hover" href="/privacy">Privacy</a>
+    </nav>
   </header>
 
   <main class="min-h-0 flex-1">
