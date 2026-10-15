@@ -1,10 +1,42 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* The stock dark primary is 3.4:1 as text on the dark base. Lighter, with dark text on it, both pass 4.5:1 (WCAG 1.4.3). */
+/*
+  Tangerine, sunshine and mint on warm cream. Primary is also used as text (outline buttons), so it is
+  kept dark enough to pass 4.5:1 on every base shade, and its content colour passes on it (WCAG 1.4.3).
+  Secondary and accent are fills only: as text they fail.
+*/
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  --color-base-100: oklch(98.5% 0.014 85);
+  --color-base-200: oklch(96% 0.024 82);
+  --color-base-300: oklch(92% 0.035 78);
+  --color-base-content: oklch(21% 0.025 40);
+  --color-primary: oklch(55% 0.185 40);
+  --color-primary-content: oklch(99% 0.01 85);
+  --color-secondary: oklch(87% 0.16 92);
+  --color-secondary-content: oklch(26% 0.03 40);
+  --color-accent: oklch(80% 0.13 170);
+  --color-accent-content: oklch(26% 0.03 40);
+  --color-neutral: oklch(30% 0.03 40);
+  --color-neutral-content: oklch(96% 0.02 82);
+}
+
+/* Lighter primary with dark text on it, so both pass 4.5:1 on the dark base. */
 @plugin "daisyui/theme" {
   name: "dark";
   prefersdark: true;
-  --color-primary: oklch(72% 0.16 277);
-  --color-primary-content: oklch(20% 0.02 260);
+  --color-base-100: oklch(24% 0.016 45);
+  --color-base-200: oklch(21.5% 0.016 45);
+  --color-base-300: oklch(19% 0.016 45);
+  --color-base-content: oklch(94% 0.015 80);
+  --color-primary: oklch(78% 0.15 55);
+  --color-primary-content: oklch(22% 0.04 35);
+  --color-secondary: oklch(85% 0.15 90);
+  --color-secondary-content: oklch(22% 0.03 40);
+  --color-accent: oklch(80% 0.13 170);
+  --color-accent-content: oklch(22% 0.03 40);
+  --color-neutral: oklch(32% 0.02 45);
+  --color-neutral-content: oklch(94% 0.015 80);
 }
