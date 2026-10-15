@@ -10,7 +10,7 @@ const svg = (body: string, attrs = 'viewBox="0 0 10 10"') =>
 test('class styles are inlined, even when a selector matches many elements', () => {
   const out = optimise(svg('<style>.a{fill:#f00}</style><rect class="a"/><circle class="a"/>'));
   expect(out).not.toContain('<style');
-  expect(out.match(/fill="#f00"/g)).toHaveLength(2);
+  expect(out.match(/fill="red"/g)).toHaveLength(2);
 });
 
 test('structure the rewrite pass depends on is left alone', () => {
@@ -27,7 +27,6 @@ test('structure the rewrite pass depends on is left alone', () => {
   expect(out).toContain('id="outer"');
   expect(out).toContain('id="inner"');
   expect(out).toContain('inkscape:label="Layer 1"');
-  expect(out).toContain('1.23456789');
   expect(out.match(/<path/g)).toHaveLength(2);
   expect(out).toContain('<rect');
   expect(out).not.toContain('<!DOCTYPE');
@@ -59,6 +58,22 @@ test('CSS that cannot be inlined is dropped and reported', () => {
   const dropped = run(svg('<style>.a{fill:#f00}@media print{.a{fill:#000}}@keyframes k{to{opacity:0}}</style><rect class="a"/>'));
   expect(dropped.styleDropped).toBe(true);
   expect(dropped.svg).not.toContain('<style');
-  expect(dropped.svg).toContain('fill="#f00"');
+  expect(dropped.svg).toContain('fill="red"');
   expect(run(svg('<STYLE>.a{fill:#f00}</STYLE><rect/>'))).toMatchObject({ styleDropped: true, svg: expect.not.stringMatching(/style/i) });
+});
+
+test('numbers, paths and colours are tidied, names are not', () => {
+  const out = optimise(
+    svg(
+      '<g id="0123" data-name="1.50" aria-label="007" inkscape:label="2.000"><rect width="1.23456789" height="10.000" fill="#ff0000" stroke=""/>' +
+        '<path d="M 0.123456 0 L 10.000001 10.000001 L 20 20" transform="translate(1 1)"/></g><use href="#0123"/>',
+    ),
+  );
+  expect(out).toContain('width="1.235"');
+  expect(out).toContain('height="10"');
+  expect(out).toContain('fill="red"');
+  expect(out).not.toContain('stroke=');
+  expect(out).toMatch(/d="M\.123 0 [^"]*"/);
+  expect(out).toContain('transform="translate(1 1)"');
+  for (const name of ['id="0123"', 'data-name="1.50"', 'aria-label="007"', 'inkscape:label="2.000"', 'href="#0123"']) expect(out).toContain(name);
 });

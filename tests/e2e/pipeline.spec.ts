@@ -97,7 +97,7 @@ test('inlines class styles through the worker and reports dropped CSS', async ({
     page,
     `<svg ${NS} viewBox="0 0 10 10"><style>.a{fill:#f00}@media print{.a{fill:#000}}</style><rect class="a"/></svg>`,
   );
-  expect(out.svg).toContain('fill="#f00"');
+  expect(out.svg).toContain('fill="red"');
   expect(out.svg).not.toContain('<style');
   expect(out.warnings).toEqual(['style-dropped']);
 });
