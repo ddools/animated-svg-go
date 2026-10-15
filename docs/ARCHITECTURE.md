@@ -201,6 +201,7 @@ Rules:
 - `editor/project.svelte.ts` holds the spec. Undo keeps whole spec snapshots (a spec is a few KB), capped at 100. A slider drag changes the spec on every `input` and becomes one undo step on `change`.
 - Autosave keeps one IndexedDB slot: file name, the original file text, and the spec. Restore is offered with a button, never automatic, and runs the text back through the whole pipeline and the spec through the schema. Storage is not trusted, and the pipeline is deterministic, so `data-k` keys still match.
 - Play state and the playhead are view state, outside the spec and outside undo. So is hiding a layer: `visibility: hidden` on its wrapper in the sandbox, so it still measures. Hidden layers still export.
+- `editor/agent.ts` registers WebMCP tools (`document.modelContext`, Chrome only so far, feature-detected) for AI agents in the browser: `load_svg`, `get_document`, `set_spec`, `export_animation`. They go through the same doors as a person: `load_svg` is `loadText`, so the whole pipeline runs, and `set_spec` parses with `SpecSchema` and lands as one undo step. Exports come back as text. No GIF or MP4.
 
 Measured: compile plus `apply` for a 200-shape spin takes 1.5 ms in Chromium and 1.3 ms in WebKit, headless on an M-series Mac.
 
@@ -359,3 +360,4 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
 - 2026-10-15: The optimiser tidies values as well as structure: colours, whitespace, empty attributes, numbers and path data to 3 decimal places. Element-changing plugins stay out, so keys and saved effects survive. Corpus gate unchanged.
 - 2026-10-15: Layer renames live in the spec (`names`), so they undo and autosave. Hiding a layer is preview-only view state.
+- 2026-10-15: WebMCP tools for in-browser AI agents. One write tool, `set_spec`, because the spec is the only state; its input schema is generated from `SpecSchema`. Nothing leaves the browser.

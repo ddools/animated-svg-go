@@ -33,6 +33,15 @@ Spin, Fade, Draw (stroke reveal), Pop, Float, Wiggle, Pulse, Slide in, Colour sh
 
 The last file and its effects are saved in the browser. Undo and redo work on every change.
 
+## For AI agents in the browser
+
+In browsers with WebMCP (`document.modelContext`, Chrome so far), the editor page registers four tools:
+
+- `load_svg`: open SVG markup. It is sanitised like any upload.
+- `get_document`: layers, the animation spec, warnings and the available effects.
+- `set_spec`: replace the animation spec. Validated, and one undo step for the person.
+- `export_animation`: the animated SVG, SVG + CSS or SVG + JS as text.
+
 ## Limits
 
 - Desktop Chrome, Firefox and Safari. Mobile is not supported.
