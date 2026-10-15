@@ -31,6 +31,8 @@
       exports: { ...cssBackend, ...snippet, ...sampler, ...frames },
       // Loaded on demand, as the export panel loads them.
       encoders: async () => ({ ...(await import('../core/export/video')), ...(await import('../core/export/gif')) }),
+      // Raster export timings for Der to run in real browsers. Loaded on demand.
+      bench: async (options) => (await import('./bench')).bench(options),
     };
   }
 

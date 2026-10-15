@@ -132,13 +132,13 @@ test('cancel stops a GIF part way and saves nothing', async ({ page }) => {
   expect(downloads).toBe(0);
 });
 
-test('GIF and MP4 wait for a timeline of ten seconds or less', async ({ page }) => {
+test('GIF and MP4 wait for a timeline of twenty seconds or less', async ({ page }) => {
   await open(page);
   await spinBox(page);
-  await lengthen(page, 12);
+  await lengthen(page, 22);
   await page.getByLabel('Format').selectOption({ label: 'GIF' });
   await expect(page.getByRole('button', { name: 'Download' })).toBeDisabled();
-  await expect(page.getByRole('status').filter({ hasText: 'GIF and MP4 take up to 10 seconds.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'GIF and MP4 take up to 20 seconds.' })).toBeVisible();
   // The text formats have no such limit.
   await page.getByLabel('Format').selectOption({ label: 'Animated SVG' });
   await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();

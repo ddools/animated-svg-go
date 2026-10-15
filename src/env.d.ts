@@ -13,6 +13,7 @@ interface Window {
       typeof import('./core/backends/sampler') &
       typeof import('./core/export/frames');
     encoders: () => Promise<typeof import('./core/export/video') & typeof import('./core/export/gif')>;
+    bench: typeof import('./editor/bench').bench;
   };
 }
 
