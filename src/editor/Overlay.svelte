@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CENTRE } from '../core/spec/effects/spin';
   import { EFFECTS } from '../core/spec/schema';
   import { playback } from './playback.svelte';
   import { project } from './project.svelte';
@@ -48,10 +49,10 @@
     return matrix && box ? { matrix, box } : null;
   }
 
-  const active = $derived(project.spec.effects.find((effect) => effect.id === project.active));
+  const active = $derived(project.activeEffect);
   const handles = $derived.by(() => {
     if (!still || !active || !EFFECTS[active.type].pivot) return [];
-    const { fx, fy } = active.pivot ?? { fx: 0.5, fy: 0.5 };
+    const { fx, fy } = active.pivot ?? CENTRE;
     return active.targets.slice(0, MAX_HANDLES).flatMap((key) => {
       const space = pivotSpace(key);
       if (!space) return [];
@@ -76,8 +77,7 @@
     const { box } = space;
     const fraction = (value: number, start: number, size: number) => (size ? Math.min(1, Math.max(0, (value - start) / size)) : 0.5);
     const pivot = { fx: fraction(local.x, box.x, box.width), fy: fraction(local.y, box.y, box.height) };
-    const id = project.active;
-    project.drag((spec) => void (spec.effects.find((effect) => effect.id === id)!.pivot = pivot));
+    project.editActive((effect) => void (effect.pivot = pivot), 'drag');
   }
 
   function dropPivot() {

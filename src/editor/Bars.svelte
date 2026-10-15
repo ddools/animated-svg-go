@@ -2,7 +2,7 @@
   import { planRuns } from '../core/ir/compile';
   import { EFFECTS, type Effect } from '../core/spec/schema';
   import { project } from './project.svelte';
-  import { selection } from './selection.svelte';
+  import { chooseEffect } from './selection.svelte';
 
   const duration = $derived(project.spec.duration);
 
@@ -12,11 +12,6 @@
     if (!runs.length) return null;
     const tail = effect.stagger ? (effect.targets.length - 1) * effect.stagger.gap : 0;
     return { from: runs[0].start, to: Math.min(duration, runs[runs.length - 1].end + tail) };
-  }
-
-  function choose(effect: Effect) {
-    project.active = effect.id;
-    selection.set(effect.targets);
   }
 </script>
 
@@ -37,7 +32,7 @@
           style:width={`${((range.to - range.from) / duration) * 100}%`}
           aria-pressed={effect.id === project.active}
           aria-label={`${EFFECTS[effect.type].label}, ${range.from.toFixed(2)} to ${range.to.toFixed(2)} seconds`}
-          onclick={() => choose(effect)}
+          onclick={() => chooseEffect(effect)}
         >
           {EFFECTS[effect.type].label}
         </button>
