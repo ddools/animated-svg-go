@@ -159,3 +159,19 @@ test('cancel stops an export part way through', async ({ page }) => {
   );
   expect(out).toEqual({ result: 'AbortError', frames: 3 });
 });
+
+test('the bench times every format it can encode', async ({ page }) => {
+  await page.goto('/editor');
+  await page.waitForFunction(() => window.__asg !== undefined);
+  const rows = await page.evaluate(() => window.__asg!.bench({ seconds: 0.5, fps: 10 }));
+  const gifs = rows.filter((row) => row.format === 'gif');
+  expect(gifs.map((row) => [row.width, row.height])).toEqual([
+    [480, 270],
+    [720, 406],
+  ]);
+  for (const row of rows) {
+    expect(row.frames).toBe(5);
+    expect(row.seconds).toBeGreaterThan(0);
+    expect(row.megabytes).toBeGreaterThan(0);
+  }
+});
