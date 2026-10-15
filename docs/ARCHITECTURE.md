@@ -50,6 +50,8 @@ Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s 
    - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, dash length for shapes (`pathLength` if set, else `getTotalLength()`), computed fill, stroke and stroke width, `dashed` (has its own `stroke-dasharray`), `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
    - Still to add when an effect needs them: closed path, `vector-effect`, heavy filter, `preserveAspectRatio="none"`, text that needs a font.
 
+Preview at the caps, measured in M7 (`tests/corpus/caps.spec.ts`, headless on an M-series Mac), 200 shapes spinning: Chromium 29 fps in a 5,000-shape drawing, 11 at 10,000, 5 at 20,000. WebKit 74, 58, 30. Cost follows the size of the drawing, not how many shapes move: 2,000 shapes all spinning in a 2,000-shape file runs at 41 and 71 fps. So there is no cap on animated shapes. Past 5,000 shapes the file panel says preview can stutter. Headless Chromium paints without the GPU; real Chrome is unmeasured.
+
 On top of the inventory, the editor's selection tools (same type, same fill, same stroke, siblings, parent) and the lasso work on visible nodes only. On the world map below they take 60 to 350 ms.
 
 Measured on the largest real corpus file (3.8 MB world map, 5,444 elements), from choosing the file to seeing it: 1.7 s in Chromium, 1.15 s in WebKit, headless on an M-series Mac with nothing else running.
@@ -286,6 +288,8 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 - **Linux CI, WebKit:** an SVG in `<img>` on the headless Linux runner does not match `prefers-reduced-motion: no-preference`, so a CSS export there never plays and shows as authored. Parity's CSS shot swaps the gate for `@media all`. Reduced motion is tested on inline exports.
 - **Linux CI, Chromium text:** text in an `<img>` screenshot is antialiased subpixel, with colour fringes; on a canvas and in live preview it is greyscale. About 0.09% of pixels, all on the glyphs. macOS never does subpixel. Parity runs Chromium with `--disable-lcd-text`.
 - **Unverified, measure in each browser:** Safari `linear()` support since 17.2.
+- **Safari's Tab key:** by default it skips buttons, links and file inputs; only text fields, selects and `tabindex` elements get focus. Option-Tab reaches everything, as does the "Press Tab to highlight each item" setting. Playwright WebKit copies this, so keyboard tests press Alt+Tab there.
+- **Theme contrast:** daisyUI's stock dark primary is 3.4:1 as text on the dark base, and its secondary and accent fail 4.5:1 in light. `global.css` overrides the dark primary. Don't use secondary or accent for text.
 
 ## 7. Approved dependencies
 
@@ -302,6 +306,7 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 | gifenc (1.0.3, pinned; no types, declared in `src/env.d.ts`) | GIF encoding | MIT |
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
 | vitest, @playwright/test, pixelmatch, pngjs, @types/pngjs, @types/node | Testing | MIT / Apache-2.0 / ISC |
+| @axe-core/playwright | Accessibility checks in e2e (M7) | MPL-2.0 |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
 | animejs (4.x), v1.1 only | Morph resampling utility | MIT |
 
@@ -359,3 +364,6 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
 - 2026-10-15: The optimiser tidies values as well as structure: colours, whitespace, empty attributes, numbers and path data to 3 decimal places. Element-changing plugins stay out, so keys and saved effects survive. Corpus gate unchanged.
 - 2026-10-15: Layer renames live in the spec (`names`), so they undo and autosave. Hiding a layer is preview-only view state.
+- 2026-10-15: M7 caps. The editor stops adding effects at the schema's 200, because a 201st made autosave restore drop every effect. No cap on animated shapes: preview cost follows drawing size, so files over 5,000 shapes get a stutter note instead of a refusal.
+- 2026-10-15: M7 security review, upload to export. Nothing critical or high. Fixed: entity expansion could take a 0.4 MB file to 200 MB past the size cap (medium; the worker now caps its own output). Low: all ARIA ID references namespaced, the CSS snippet's style text-checked, paste inside a text field left to the field. Re-review closed all four.
+- 2026-10-15: WCAG 2.2 AA pass. `@axe-core/playwright` scans every page and editor state in both colour schemes; a keyboard-only test runs open to export. The dark theme's primary is overridden for contrast.

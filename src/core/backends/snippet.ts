@@ -1,12 +1,16 @@
 // The two snippets: markup plus CSS to paste, or markup plus a small WAAPI script. See docs/ARCHITECTURE.md section 5.
 import { camel } from '../ir/format';
 import { ADDITIVE_PROPERTIES, type IR } from '../ir/types';
+import { exportStyleIsSafe } from '../parse/sanitise';
 import { checkValue, css, exportMarkup, scopeOf, selector } from './css';
 
 /** Inline SVG and the CSS that animates it. The page must keep the data attributes and IDs. */
 export function cssSnippet(svg: string, ir: IR): { svg: string; css: string } {
   const scope = scopeOf(svg, ir);
-  return { svg: exportMarkup(svg, scope), css: css(ir, scope) };
+  const style = css(ir, scope);
+  // The page wraps this in <style>. checkValue already rules out "<", so this is a second line (M7 security review).
+  if (!exportStyleIsSafe(style)) throw new Error('Export refused: unexpected style.');
+  return { svg: exportMarkup(svg, scope), css: style };
 }
 
 /** Inline SVG and a script that plays it with element.animate(). Nothing plays under reduced motion. */

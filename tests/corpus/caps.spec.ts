@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test';
 import { normalise, openPipeline } from '../helpers/pipeline';
 
 // A file right at the limits: just under 20,000 elements and just under 5 MB.
+const segment = 'c1.5 2.25 3.5 4.75 5.5 6.25 ';
+const path = (i: number) => `<path id="p${i}" class="c${i % 7}" d="M${i % 900} ${i % 700}${segment.repeat(7)}z"/>`;
+const groups = Array.from({ length: 199 }, (_, g) => `<g id="g${g}">${Array.from({ length: 99 }, (_, i) => path(g * 99 + i)).join('')}</g>`);
+const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 800"><style>${Array.from({ length: 7 }, (_, c) => `.c${c}{fill:#${c}${c}${c}}`).join('')}</style>${groups.join('')}</svg>`;
+const padded = raw.replace('</svg>', `<!--${'x'.repeat(5 * 1024 * 1024 - raw.length - 64)}--></svg>`);
+
 // Prints the timings that the caps in src/core/parse/limits.ts are tuned against.
 test('a file at the caps is processed', async ({ page }, testInfo) => {
-  const segment = 'c1.5 2.25 3.5 4.75 5.5 6.25 ';
-  const path = (i: number) => `<path id="p${i}" class="c${i % 7}" d="M${i % 900} ${i % 700}${segment.repeat(7)}z"/>`;
-  const groups = Array.from({ length: 199 }, (_, g) => `<g id="g${g}">${Array.from({ length: 99 }, (_, i) => path(g * 99 + i)).join('')}</g>`);
-  const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 800"><style>${Array.from({ length: 7 }, (_, c) => `.c${c}{fill:#${c}${c}${c}}`).join('')}</style>${groups.join('')}</svg>`;
-  const padded = raw.replace('</svg>', `<!--${'x'.repeat(5 * 1024 * 1024 - raw.length - 64)}--></svg>`);
-
   await openPipeline(page);
   const out = await normalise(page, padded);
   if (!out.ok) throw new Error(`${out.code}: ${out.message}`);
@@ -73,4 +73,34 @@ test('selection tools stay quick on the largest corpus file', async ({ page }, t
   );
   console.log(`tools ${testInfo.project.name}: ${results.join(', ')}`);
   expect(await page.evaluate(() => window.__asg!.selection.keys.size)).toBeGreaterThan(100);
+});
+
+// 200 shapes spinning in drawings of growing size. Sets the size past which the editor
+// says preview may stutter (BUSY in src/editor/Panel.svelte).
+const upTo = (groups: number) => raw.replace(/<g id="g(\d+)">.*?<\/g>/g, (group, g) => (Number(g) < groups ? group : ''));
+test('preview frame rate as the drawing grows', async ({ page }, testInfo) => {
+  const results = [];
+  for (const [size, file] of [[5_000, upTo(51)], [10_000, upTo(101)], [20_000, padded]] as const) {
+    await page.goto('/editor');
+    await page.locator('input[type=file]').setInputFiles({ name: 'caps.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(file) });
+    await page.waitForFunction(() => window.__asg?.editor.inventory !== undefined, undefined, { timeout: 60_000 });
+    await page.evaluate(() => {
+      const { editor, selection } = window.__asg!;
+      selection.set([...editor.inventory!.nodes.values()].filter((n) => n.type === 'path').slice(0, 200).map((n) => n.key));
+    });
+    await page.getByRole('button', { name: '+ Spin' }).click();
+    await page.waitForFunction(() => window.__asg!.playback.playing, undefined, { timeout: 60_000 });
+    const fps = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          let frames = 0;
+          const end = performance.now() + 2000;
+          const tick = () => (++frames, performance.now() < end ? requestAnimationFrame(tick) : resolve(frames / 2));
+          requestAnimationFrame(tick);
+        }),
+    );
+    results.push(`${size.toLocaleString('en-GB')} shapes ${Math.round(fps)} fps`);
+  }
+  console.log(`preview ${testInfo.project.name}, 200 spinning: ${results.join(', ')}`);
+  await expect(page.getByText('Preview can stutter on a file this big.')).toBeVisible();
 });

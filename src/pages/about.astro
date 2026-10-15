@@ -1,0 +1,57 @@
+---
+import Page from '../layouts/Page.astro';
+
+const credits = [
+  ['SVGO', 'https://github.com/svg/svgo', 'tidies every file', 'MIT'],
+  ['DOMPurify', 'https://github.com/cure53/DOMPurify', 'strips anything unsafe', 'MPL-2.0 or Apache-2.0'],
+  ['Mediabunny', 'https://mediabunny.dev', 'writes MP4', 'MPL-2.0'],
+  ['gifenc', 'https://github.com/mattdesl/gifenc', 'writes GIF', 'MIT'],
+  ['Zod', 'https://zod.dev', 'checks every saved animation', 'MIT'],
+  ['idb-keyval', 'https://github.com/jakearchibald/idb-keyval', 'keeps your last file in this browser', 'Apache-2.0'],
+  ['Astro', 'https://astro.build', 'builds the site', 'MIT'],
+  ['Svelte', 'https://svelte.dev', 'runs the editor', 'MIT'],
+  ['Tailwind CSS', 'https://tailwindcss.com', 'styles it', 'MIT'],
+  ['daisyUI', 'https://daisyui.com', 'styles it too', 'MIT'],
+];
+---
+
+<Page title="About" description="What Animated SVG GO is, how it works, and who it builds on.">
+  <div class="flex flex-col gap-8">
+    <h1 class="text-3xl font-bold">About</h1>
+
+    <section aria-labelledby="what-heading" class="flex flex-col gap-2">
+      <h2 id="what-heading" class="text-xl font-bold">What it is</h2>
+      <p>
+        A free tool for bringing an SVG to life. Think <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a>, but for
+        motion. Drop in a file, choose shapes, add effects, export.
+      </p>
+    </section>
+
+    <section aria-labelledby="how-heading" class="flex flex-col gap-2">
+      <h2 id="how-heading" class="text-xl font-bold">How it works</h2>
+      <p>
+        Your file is tidied, then cleaned of scripts and anything else that could run. It is shown in a locked-down frame that can't run
+        code. Each effect becomes plain CSS keyframes, so what you see in the editor is what you export. GIF and MP4 are drawn frame by
+        frame from the same timeline. All of it happens on your machine.
+      </p>
+    </section>
+
+    <section aria-labelledby="browsers-heading" class="flex flex-col gap-2">
+      <h2 id="browsers-heading" class="text-xl font-bold">Browsers</h2>
+      <p>Chrome, Firefox and Safari on a desktop or laptop. Phones and tablets aren't supported yet.</p>
+    </section>
+
+    <section aria-labelledby="credits-heading" class="flex flex-col gap-2">
+      <h2 id="credits-heading" class="text-xl font-bold">Built on</h2>
+      <ul class="list-disc pl-6">
+        {
+          credits.map(([name, href, job, licence]) => (
+            <li>
+              <a class="link" href={href}>{name}</a> {job}. {licence}.
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</Page>

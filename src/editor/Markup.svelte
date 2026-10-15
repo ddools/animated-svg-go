@@ -7,7 +7,8 @@
   const COLOUR_LIMIT = 300_000;
   // Tag names, attribute names, quoted values, tag ends. Text is never parsed as markup, only split into spans.
   const TOKEN = /(<\/?[\w:.-]+)|([\w:.-]+)(?==")|("[^"]*")|(\/?>)/g;
-  const CLASSES = ['', 'text-primary', 'text-secondary', 'text-accent', 'text-primary'];
+  // Tailwind's 700 and 300 shades pass 4.5:1 on the light and dark base. daisyUI's secondary and accent don't.
+  const CLASSES = ['', 'text-indigo-700 dark:text-indigo-300', 'text-pink-700 dark:text-pink-300', 'text-teal-700 dark:text-teal-300', 'text-indigo-700 dark:text-indigo-300'];
 
   let text = $state('');
   let copied = $state('');

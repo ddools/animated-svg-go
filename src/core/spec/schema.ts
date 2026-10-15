@@ -11,6 +11,9 @@ import { float, FloatParams } from './effects/float';
 import { spin, SpinParams } from './effects/spin';
 import { wiggle, WiggleParams } from './effects/wiggle';
 
+/** The most effects one spec holds. The editor stops adding at this, so an autosave always restores. */
+export const MAX_EFFECTS = 200;
+
 const unit = z.number().min(0).max(1);
 const key = z.string().min(1).max(64);
 
@@ -70,7 +73,7 @@ export const SpecSchema = z.object({
   names: z.record(key, z.string().min(1).max(100)).optional(),
   effects: z
     .array(EffectSchema)
-    .max(200)
+    .max(MAX_EFFECTS)
     // Here, not on EffectSchema: EFFECTS' type is built from Effect, so checking it there is circular.
     .superRefine((effects, context) =>
       effects.forEach((effect, i) => {

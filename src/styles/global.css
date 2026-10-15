@@ -1,2 +1,10 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+/* The stock dark primary is 3.4:1 as text on the dark base. Lighter, with dark text on it, both pass 4.5:1 (WCAG 1.4.3). */
+@plugin "daisyui/theme" {
+  name: "dark";
+  prefersdark: true;
+  --color-primary: oklch(72% 0.16 277);
+  --color-primary-content: oklch(20% 0.02 260);
+}

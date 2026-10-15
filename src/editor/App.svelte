@@ -92,6 +92,9 @@
   }
 
   function paste(event: ClipboardEvent) {
+    // A paste into a text field is the field's. Without this, pasting markup into a layer name replaced the drawing.
+    const target = event.target as HTMLElement;
+    if (target.localName === 'input' || target.localName === 'textarea' || target.isContentEditable) return;
     const file = event.clipboardData?.files[0];
     if (file) return void loadFile(file);
     const text = event.clipboardData?.getData('text/plain') ?? '';
@@ -114,6 +117,10 @@
       </span>
       <DropZone compact />
     {/if}
+    <nav class="flex gap-3 text-sm" class:ml-auto={editor.status !== 'ready'} aria-label="Site">
+      <a class="link link-hover" href="/about">About</a>
+      <a class="link link-hover" href="/privacy">Privacy</a>
+    </nav>
   </header>
 
   <main class="min-h-0 flex-1">
@@ -126,8 +133,8 @@
         </nav>
         <div class="flex min-h-0 flex-col">
           <div role="tablist" class="tabs tabs-border tabs-sm border-base-300 border-b px-4">
-            <button type="button" role="tab" class="tab" class:tab-active={view === 'image'} aria-selected={view === 'image'} onclick={() => (view = 'image')}>Image</button>
-            <button type="button" role="tab" class="tab" class:tab-active={view === 'markup'} aria-selected={view === 'markup'} onclick={() => (view = 'markup')}>Markup</button>
+            <button type="button" role="tab" class="tab text-base-content/80" class:tab-active={view === 'image'} aria-selected={view === 'image'} onclick={() => (view = 'image')}>Image</button>
+            <button type="button" role="tab" class="tab text-base-content/80" class:tab-active={view === 'markup'} aria-selected={view === 'markup'} onclick={() => (view = 'markup')}>Markup</button>
           </div>
           <div class="canvas relative min-h-0 flex-1 p-6" data-testid="canvas">
             <div class="relative h-full">
