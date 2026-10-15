@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { NoteCode } from '../core/ir/types';
-  import { EFFECTS, newEffect, type Effect, type EffectType } from '../core/spec/schema';
+  import { EFFECTS, MAX_EFFECTS, newEffect, type Effect, type EffectType } from '../core/spec/schema';
   import { CENTRE } from '../core/spec/effects/spin';
   import EasingPicker from './EasingPicker.svelte';
   import { playback } from './playback.svelte';
@@ -33,6 +33,7 @@
 
   const TYPES = Object.keys(EFFECTS) as EffectType[];
   const active = $derived(project.activeEffect);
+  const full = $derived(project.spec.effects.length >= MAX_EFFECTS);
   const module = $derived(active && EFFECTS[active.type]);
 
   function shapes(count: number) {
@@ -81,11 +82,14 @@
   <h2 id="effects-heading" class="font-bold">Effects</h2>
   <div class="flex flex-wrap gap-1" role="group" aria-label="Add an effect to the selection">
     {#each TYPES as type (type)}
-      <button type="button" class="btn btn-xs btn-primary btn-outline" disabled={!selection.keys.size} onclick={() => add(type)}>
+      <button type="button" class="btn btn-xs btn-primary btn-outline" disabled={!selection.keys.size || full} onclick={() => add(type)}>
         + {EFFECTS[type].label}
       </button>
     {/each}
   </div>
+  {#if full}
+    <p class="text-xs" role="status">{MAX_EFFECTS} effects is the most one file can hold. Remove one to add another.</p>
+  {/if}
 
   {#if project.spec.effects.length}
     <ul class="flex flex-col gap-1" aria-label="Effects in this animation">
