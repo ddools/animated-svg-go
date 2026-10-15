@@ -29,8 +29,8 @@ export function frameTimes(duration: number, fps: number, loop: boolean): number
   return loop ? times : [...times, duration];
 }
 
-// ponytail: a placeholder until Der measures Chrome and Safari (PLAN Stage 6 item 7). 10 s at 30 fps is 300 frames.
-export const MAX_SECONDS = 10;
+// Measured with the bench (ARCHITECTURE section 5): speed isn't the limit, GIF size is. 20 s at 30 fps is 600 frames.
+export const MAX_SECONDS = 20;
 
 /** Pixel size for a drawing `width` wide, keeping the viewBox's shape. Both sides even, which H.264 needs. */
 export function rasterSize(viewBox: Size, width: number): Size {
