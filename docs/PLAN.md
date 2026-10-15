@@ -149,7 +149,7 @@ Approved decisions:
 | 5 | GIF through gifenc with a size estimate | Opus (moved from Sonnet: Der's call) | | ✓ Estimate within 3% headless |
 | 6 | Resolution, fps and background presets. Progress and cancel UI | Opus (moved from Sonnet: Der's call), copy included | Der reads the copy | Built. Waiting on Der's read of the copy |
 | 7 | Bench hook. Measure 5 s, 30 fps at 720 and 1080 in Chrome and Safari | Opus builds, Der measures | Opus sets the caps from the numbers | ✓ Measured in Chrome and Safari. `MAX_SECONDS` 20 for both formats |
-| 8 | WebKit e2e and parity runs | `webkit-checker`, `corpus-runner` | |  |
+| 8 | WebKit e2e and parity runs | `webkit-checker`, `corpus-runner` | | ✓ On 8a3dbaf. WebKit e2e 310 passed, 8 skipped by design (7 hostile files the pipeline refuses, WebKit clipboard). Parity 76/76 and corpus 270/270 in Chromium and WebKit, gate passed. Opus ran them directly; the subagents were not run |
 | 9 | Export a 5 s, 30 fps, 1080p MP4 and a GIF in Chrome and Safari | Der | Sign-off |  |
 
 ## Parked
