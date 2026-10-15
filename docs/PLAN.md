@@ -171,6 +171,7 @@ Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/
 | 5 | Landing, about and privacy pages | Opus builds and drafts copy (Der's call) | Der edits the copy |  |
 | 6 | Optional whole-architecture review | Fable | Der decides whether to run it | Skipped: Der's call, 15 Oct |
 | 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off |  |
+| 8 | Lighter CI. Browser suites on PRs only, e2e split by engine, docs-only changes skip CI | Opus (Der's call, 15 Oct) | | ✓ Merges to main run lint, unit and the build guard. Decision log in ARCHITECTURE |
 
 ## What only Der can do
 
