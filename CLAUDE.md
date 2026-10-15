@@ -4,6 +4,8 @@ A free, public, browser-only tool. Drop in any SVG, animate its parts with slide
 
 Status: M6 done. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 take timelines up to 20 s, measured in Chrome and Safari. Research complete 13 Oct 2026. Full research write-up (private to Der): https://claude.ai/code/artifact/d6a21a86-3bb1-464a-b262-f396c3234298
 
+Live at https://www.svgomg.fyi (the bare domain redirects there). Vercel project `animated-svg-go` in the `ddools-projects` team; DNS at Porkbun.
+
 Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Read before you work
@@ -39,11 +41,12 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Repository layout (target)
 
-Built so far: `src/pages/`, `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/core/export/` (frames, gif, video), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
+Built so far: `src/pages/`, `src/components/`, `public/` (icons, social card, robots.txt, sitemap.xml), `src/editor/`, `src/core/parse/`, `src/core/spec/`, `src/core/ir/` (types, format, compile, evaluate), `src/core/backends/` (waapi, css, snippet, sampler), `src/core/export/` (frames, gif, video), `src/workers/`, and all five `tests/` folders. The rest arrives with its first file.
 
 ```
 src/
   pages/                    Astro pages (landing, editor, about)
+  components/               Astro components. Head.astro holds the shared title, SEO and icon tags.
   editor/                   Svelte 5 island: App, LayerTree, Overlay, Panel, Effects, Export, Timeline, sandbox.ts, state, selection, project and playback stores, load.ts, pipeline.ts
   core/                     Framework-free TypeScript. Unit tested. No DOM globals at import time.
     parse/                  index.ts (normalise), optimise.ts, sanitise.ts, rewrite.ts, limits.ts, inventory.ts
