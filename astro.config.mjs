@@ -3,6 +3,7 @@ import svelte from '@astrojs/svelte';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  site: 'https://www.svgomg.fyi',
   output: 'static',
   integrations: [svelte()],
   vite: { plugins: [tailwindcss()] },

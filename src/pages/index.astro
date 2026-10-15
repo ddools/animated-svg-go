@@ -1,16 +1,19 @@
 ---
 import '../styles/global.css';
+import Head from '../components/Head.astro';
 ---
 
 <!doctype html>
 <html lang="en-GB">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Animated SVG GO</title>
+    <Head
+      title="Animated SVG GO: animate any SVG in your browser"
+      description="Drop in an SVG, animate its parts with sliders and export animated SVG, CSS, JS, GIF or MP4. Free, no sign-up, and your file never leaves your browser."
+    />
   </head>
   <body class="grid min-h-screen place-items-center">
     <main class="text-center">
+      <img class="mx-auto mb-6" src="/icon.svg" width="96" height="96" alt="" />
       <h1 class="text-4xl font-bold">Animated SVG GO</h1>
       <p class="py-4">Drop in an SVG. Make it move. Export it.</p>
       <a class="btn btn-primary" href="/editor">Open the editor</a>
