@@ -15,15 +15,24 @@ const credits = [
 ];
 ---
 
-<Page title="About" description="What Animated SVG GO is, how it works, and who it builds on.">
+<Page title="About" description="What Animated SVG GO does, how it works, where the code lives and who it builds on.">
   <div class="flex max-w-3xl flex-col gap-8">
     <h1 class="text-3xl font-bold">About</h1>
+    <p class="text-lg">
+      A free tool for bringing an SVG to life. Think <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a>, but for
+      motion.
+    </p>
 
     <section aria-labelledby="what-heading" class="flex flex-col gap-2">
-      <h2 id="what-heading" class="text-xl font-bold">What it is</h2>
+      <h2 id="what-heading" class="text-xl font-bold">What it does</h2>
       <p>
-        A free tool for bringing an SVG to life. Think <a class="link" href="https://jakearchibald.github.io/svgomg/">SVGOMG</a>, but for
-        motion. Drop in a file, choose shapes, add effects, export.
+        Drop in a file, choose shapes, add effects, export. There are nine effects: Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in
+        and Colour shift. Stack them, stagger them, pick an easing, drag the pivot and scrub the timeline. Undo and redo work as you'd
+        expect.
+      </p>
+      <p>
+        Take it out as an animated SVG, an SVG with CSS or JavaScript to paste into a page, a GIF or an MP4. The SVG, CSS and JavaScript
+        exports respect reduced motion settings.
       </p>
     </section>
 
@@ -32,8 +41,27 @@ const credits = [
       <p>
         Your file is tidied, then cleaned of scripts and anything else that could run. It is shown in a locked-down frame that can't run
         code. Each effect becomes plain CSS keyframes, so what you see in the editor is what you export. GIF and MP4 are drawn frame by
-        frame from the same timeline. All of it happens on your machine.
+        frame from the same timeline. All of it happens on your machine. No uploads, no accounts.
       </p>
+    </section>
+
+    <section aria-labelledby="source-heading" class="flex flex-col gap-2">
+      <h2 id="source-heading" class="text-xl font-bold">Open source</h2>
+      <p>
+        The code is on <a class="link" href="https://github.com/ddools/animated-svg-go">GitHub</a> under the MIT licence. Found a bug, or
+        a file that won't load? <a class="link" href="https://github.com/ddools/animated-svg-go/issues">Open an issue</a>. Attach the SVG if
+        you can.
+      </p>
+    </section>
+
+    <section aria-labelledby="next-heading" class="flex flex-col gap-2">
+      <h2 id="next-heading" class="text-xl font-bold">What's next</h2>
+      <p>Path morphing, so one shape can turn into another. Then share links.</p>
+    </section>
+
+    <section aria-labelledby="who-heading" class="flex flex-col gap-2">
+      <h2 id="who-heading" class="text-xl font-bold">Who made it</h2>
+      <p>Der Dooley.</p>
     </section>
 
     <section aria-labelledby="browsers-heading" class="flex flex-col gap-2">
