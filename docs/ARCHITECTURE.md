@@ -26,7 +26,8 @@ Order matters: nothing but our own rewrite touches the markup after it is saniti
    - Enforces the element and depth caps early, off the main thread, so an oversized file is refused before the sanitiser has to walk it.
    - Removes every element that is not plain SVG (prefixed elements, or a non-SVG `xmlns`). Editor and test-suite metadata embeds XHTML, and under the sanitiser's HTML parser a `<p>` closes the `<svg>` and loses the drawing.
    - Inlines styles (`inlineStyles` with `onlyMatchedOnce: false`, then `convertStyleToAttrs`), then removes any `<style>` element that is left and reports it. Class-based fills survive; media queries, keyframes and `@font-face` do not.
-   Nothing here may merge paths, collapse groups, rename IDs, round numbers or strip editor labels. The worker is terminated after 10 s.
+   - Tidies values, after SVGOMG: `cleanupAttrs`, `removeEmptyAttrs`, `convertColors`, `cleanupNumericValues` and `convertPathData` at 3 decimal places. Transforms stay on their element and absolute units stay as written. IDs, `data-*`, `aria-*` and prefixed attributes are set aside around these, because `cleanupNumericValues` would turn `id="0123"` into `123`.
+   Nothing here may add, remove, merge or reorder elements, rename IDs or strip editor labels: keys come from element position. The worker is terminated after 10 s.
 3. **Sanitise.** Main thread. See section 2. Editor layer names (`inkscape:label`, `serif:id`, `sketch:name`) are read inside a sanitiser hook, as plain strings, just before those attributes are stripped.
 4. **Tree caps.** Element count (20,000) and nesting depth (64) again, on the sanitised tree. Plus an expansion cap: at most 200,000 shapes once every `<use>` is followed, so a few hundred nested `<use>` cannot render billions.
 5. **Rewrite.** Main thread, `core/parse/rewrite.ts`. The product's core. In order:
@@ -119,6 +120,7 @@ type Spec = {
   version: 1;
   duration: number;            // seconds, the timeline, 0.1 to 60
   loop: boolean;               // the whole timeline repeats
+  names?: Record<string, string>; // layer names the user typed, by data-k. Editor only, never compiled or exported
   effects: Effect[];
 };
 
@@ -198,7 +200,7 @@ Rules:
 
 - `editor/project.svelte.ts` holds the spec. Undo keeps whole spec snapshots (a spec is a few KB), capped at 100. A slider drag changes the spec on every `input` and becomes one undo step on `change`.
 - Autosave keeps one IndexedDB slot: file name, the original file text, and the spec. Restore is offered with a button, never automatic, and runs the text back through the whole pipeline and the spec through the schema. Storage is not trusted, and the pipeline is deterministic, so `data-k` keys still match.
-- Play state and the playhead are view state, outside the spec and outside undo.
+- Play state and the playhead are view state, outside the spec and outside undo. So is hiding a layer: `visibility: hidden` on its wrapper in the sandbox, so it still measures. Hidden layers still export.
 
 Measured: compile plus `apply` for a 200-shape spin takes 1.5 ms in Chromium and 1.3 ms in WebKit, headless on an M-series Mac.
 
@@ -355,3 +357,5 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-14: Parity is green on CI's Linux runner. The CSS shot opens the export's reduced-motion gate, and Chromium draws text greyscale. Both were runner effects, not export bugs. Unparks the WebKit item.
 - 2026-10-14: M6 started alongside the M5 effects. Raster frames skip the whole-file re-sanitise: checked once per export, each frame's style text-checked. Security review: nothing critical, high or medium; the per-frame input is now a branded type and a raster frame is detonated in the payload suite. No font embedding, because uploads keep no fonts.
 - 2026-10-13: Astro 7, not 6. Astro 6 had no release after June 2026. TypeScript held at 6.x because Astro, Svelte and typescript-eslint tooling do not accept 7 yet.
+- 2026-10-15: The optimiser tidies values as well as structure: colours, whitespace, empty attributes, numbers and path data to 3 decimal places. Element-changing plugins stay out, so keys and saved effects survive. Corpus gate unchanged.
+- 2026-10-15: Layer renames live in the spec (`names`), so they undo and autosave. Hiding a layer is preview-only view state.
