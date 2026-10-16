@@ -1,5 +1,7 @@
 ---
 // Shared <head> tags: title, description, canonical URL, icons and social cards.
+import Analytics from '@vercel/analytics/astro';
+
 interface Props {
   title: string;
   description: string;
@@ -30,3 +32,4 @@ const image = new URL('/og.png', Astro.site);
 <meta property="og:locale" content="en_GB" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="google-site-verification" content="uBiAAnePao66a_mbvVbnRYV3MepTIlGh6tigxEHgeUg" />
+<Analytics />
