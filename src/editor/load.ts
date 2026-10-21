@@ -13,7 +13,7 @@ const MESSAGES: Record<PipelineErrorCode, string> = {
   timeout: 'That file took too long to process.',
 };
 
-function fail(code: PipelineErrorCode): void {
+export function fail(code: PipelineErrorCode): void {
   editor.status = 'error';
   editor.error = MESSAGES[code];
 }

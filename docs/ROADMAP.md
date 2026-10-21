@@ -109,6 +109,21 @@ Done when: Der signs off on a pass through Chrome, Firefox and Safari on his Mac
 
 Measured: built 15 Oct, waiting on Der's pass. Security review: nothing critical or high; one medium and four lows fixed and re-reviewed. Caps: preview cost follows drawing size, so big files get a note, not a refusal; effects stop at 200. axe finds nothing in Chromium or WebKit. Pages drafted; Der edits the copy.
 
+## M8. VS Code extension
+
+Lead: Opus 5.5.
+
+The same editor as a custom editor for `.svg` in VS Code. A spike on 21 Oct proved the risky parts first: the worker, the sandbox, the clipboard, MP4 and GIF.
+
+- A host seam in the editor, so the site and the extension share one island.
+- Effects kept per file in VS Code's storage, restored while the file is unchanged.
+- Exports saved through VS Code's save dialog.
+- A local `.vsix` and a smoke test that runs in a real VS Code.
+
+Done when: `pnpm ext:smoke` passes against the packaged `.vsix`, `security-reviewer` finds nothing critical or high, and Der has used it in his own VS Code on his Mac.
+
+Measured: built 21 Oct on `feat/vscode-extension`. The smoke test passes against the dev folder and against the installed `.vsix` in VS Code 1.142. Security review: nothing critical, high or medium; six lows fixed. Der installed the `.vsix` in his own VS Code and signed it off, 21 Oct.
+
 ## Later
 
 | Item | Lead | Notes |
@@ -120,4 +135,6 @@ Measured: built 15 Oct, waiting on Der's pass. Security review: nothing critical
 | Mobile and touch support | Sonnet 5.5 | Not a v1 target. Needs iOS canvas and memory limits measured on a real device first |
 | Gradient colour shift | Opus 5.5 | Clone a shared gradient per animated shape in rewrite, animate `stop-color`. Needs `security-reviewer` |
 | Draw "outline then fill" | Sonnet 5.5 | Draw the stroke, then fade in `fill-opacity` |
+| Publish the VS Code extension | Opus 5.5 | Marketplace and Open VSX. Der creates the publisher and tokens. Brings back the vsce question |
+| VS Code Language Model tools | Opus 5.5 | The WebMCP tools in `agent.ts`, offered to VS Code's agents instead |
 | Lottie | Not planned | Revisit only with real demand, and only for a transform/opacity/trim-path subset |

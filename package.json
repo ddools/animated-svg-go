@@ -15,7 +15,10 @@
     "test:e2e": "playwright test",
     "corpus": "rm -rf tests/corpus/report && (playwright test -c playwright.corpus.config.ts || true) && node tests/corpus/summarise.mjs",
     "parity": "playwright test -c playwright.parity.config.ts",
-    "lint": "eslint . && svelte-check && tsc --noEmit"
+    "lint": "eslint . && svelte-check && tsc --noEmit",
+    "ext:build": "node extension/build.mjs",
+    "ext:smoke": "node extension/build.mjs && node extension/smoke.mjs",
+    "ext:package": "node extension/build.mjs && node extension/package.mjs"
   },
   "devDependencies": {
     "@astrojs/svelte": "^9.0.1",
@@ -25,6 +28,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/pngjs": "^6.0.5",
+    "@types/vscode": "1.90.0",
     "astro": "^7.3.8",
     "daisyui": "^5.7.47",
     "eslint": "^10.12.0",

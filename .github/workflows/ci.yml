@@ -29,6 +29,9 @@ jobs:
       # VERCEL=1 builds as Vercel does, with analytics in, so the CSP check sees what production serves.
       - name: Production build has no test hooks, and its CSP is in <head>
         run: VERCEL=1 pnpm build && ! grep -rq __asg dist && node tests/security/csp-head.mjs
+      # The editor island also builds into the VS Code extension. The smoke run needs a local VS Code, so it stays on Der's Mac.
+      - name: VS Code extension packages, with no test hooks
+        run: pnpm ext:package && ! grep -rq __asg extension/media
 
   e2e:
     if: github.event_name == 'pull_request'

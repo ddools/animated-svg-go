@@ -13,6 +13,7 @@
   import * as snippet from '../core/backends/snippet';
   import * as frames from '../core/export/frames';
   import { registerAgentTools } from './agent';
+  import { host } from './host';
   import { loadFile, loadText } from './load';
   import { mount } from './sandbox';
   import { normaliseFile } from './pipeline';
@@ -90,13 +91,16 @@
     else project.undo();
   }
 
+  // In VS Code the tab belongs to its file, so another drawing can't be dropped or pasted in.
   function drop(event: DragEvent) {
     event.preventDefault();
+    if (host.kind !== 'web') return;
     const file = event.dataTransfer?.files[0];
     if (file) void loadFile(file);
   }
 
   function paste(event: ClipboardEvent) {
+    if (host.kind !== 'web') return;
     // A paste into a text field is the field's. Without this, pasting markup into a layer name replaced the drawing.
     const target = event.target as HTMLElement;
     if (target.localName === 'input' || target.localName === 'textarea' || target.isContentEditable) return;
@@ -112,7 +116,12 @@
 <div class="flex h-screen flex-col">
   <header class="border-base-300 flex items-center gap-4 border-b px-4 py-2">
     <h1 class="flex items-center gap-2 text-lg font-bold">
-      <a href="/" class="contents"><img src="/icon.svg" width="24" height="24" alt="" />Animated SVG GO</a>
+      <!-- In VS Code there is no site to go back to, and the tab is tied to its file. -->
+      {#if host.kind === 'web'}
+        <a href="/" class="contents"><img src="/icon.svg" width="24" height="24" alt="" />Animated SVG GO</a>
+      {:else}
+        Animated SVG GO
+      {/if}
     </h1>
     {#if editor.status === 'ready'}
       <span class="truncate text-sm opacity-70">{editor.fileName}</span>
@@ -120,12 +129,14 @@
         <button type="button" class="btn btn-sm btn-ghost" disabled={!project.past.length} onclick={() => project.undo()} title="Undo (⌘Z)">Undo</button>
         <button type="button" class="btn btn-sm btn-ghost" disabled={!project.future.length} onclick={() => project.redo()} title="Redo (⇧⌘Z)">Redo</button>
       </span>
-      <DropZone compact />
+      {#if host.kind === 'web'}<DropZone compact />{/if}
     {/if}
-    <nav class="flex gap-3 text-sm" class:ml-auto={editor.status !== 'ready'} aria-label="Site">
-      <a class="link link-hover" href="/about">About</a>
-      <a class="link link-hover" href="/privacy">Privacy</a>
-    </nav>
+    {#if host.kind === 'web'}
+      <nav class="flex gap-3 text-sm" class:ml-auto={editor.status !== 'ready'} aria-label="Site">
+        <a class="link link-hover" href="/about">About</a>
+        <a class="link link-hover" href="/privacy">Privacy</a>
+      </nav>
+    {/if}
   </header>
 
   <main class="min-h-0 flex-1">
@@ -158,10 +169,13 @@
           {#if editor.inventory}<Panel />{/if}
         </aside>
       </div>
-    {:else if editor.status === 'loading'}
+    {:else if editor.status === 'loading' || (host.kind === 'vscode' && editor.status !== 'error')}
+      <!-- VS Code sends the file after the editor mounts, so there is nothing to drop in the meantime. -->
       <div class="grid h-full place-items-center" role="status">
         <span class="loading loading-spinner loading-lg" aria-label="Reading your file"></span>
       </div>
+    {:else if host.kind === 'vscode'}
+      <p role="alert" class="alert alert-error m-6">{editor.error}</p>
     {:else}
       <DropZone />
     {/if}

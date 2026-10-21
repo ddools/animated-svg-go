@@ -1,0 +1,32 @@
+{
+  "name": "animated-svg-go",
+  "displayName": "Animated SVG GO",
+  "description": "Animate the parts of any SVG with sliders, then export animated SVG, CSS, JS, GIF or MP4. Nothing leaves your machine.",
+  "version": "0.1.0",
+  "publisher": "ddools",
+  "license": "MIT",
+  "private": true,
+  "icon": "icon.png",
+  "repository": { "type": "git", "url": "https://github.com/ddools/animated-svg-go.git" },
+  "homepage": "https://www.svgomg.fyi",
+  "categories": ["Visualization", "Other"],
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./extension.cjs",
+  "activationEvents": ["onLanguage:xml"],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "animatedSvgGo.editor",
+        "displayName": "Animated SVG GO",
+        "selector": [{ "filenamePattern": "*.svg" }],
+        "priority": "option"
+      }
+    ],
+    "commands": [{ "command": "animatedSvgGo.open", "title": "Open with Animated SVG GO", "icon": "$(play-circle)" }],
+    "menus": {
+      "explorer/context": [{ "command": "animatedSvgGo.open", "when": "resourceExtname == .svg", "group": "navigation" }],
+      "editor/title": [{ "command": "animatedSvgGo.open", "when": "resourceExtname == .svg && activeCustomEditorId != animatedSvgGo.editor", "group": "navigation" }],
+      "commandPalette": [{ "command": "animatedSvgGo.open", "when": "resourceExtname == .svg" }]
+    }
+  }
+}

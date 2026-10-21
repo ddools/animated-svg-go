@@ -1,5 +1,6 @@
 <script lang="ts" module>
   import { TEXT, type TextFormat } from './formats';
+  import { host } from './host';
 
   type RasterFormat = 'gif' | 'mp4';
   type Format = TextFormat | RasterFormat;
@@ -88,15 +89,9 @@
     };
   });
 
-  function save(blob: Blob, extension: string) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${editor.fileName.replace(/\.svg$/i, '') || 'drawing'}-animated.${extension}`;
-    link.click();
-    // After the click has started the download.
-    setTimeout(() => URL.revokeObjectURL(url));
-    status = `Downloaded, ${bytes(blob.size)}.`;
+  async function save(blob: Blob, extension: string) {
+    const name = `${editor.fileName.replace(/\.svg$/i, '') || 'drawing'}-animated.${extension}`;
+    if (await host.save(blob, name)) status = `${host.kind === 'web' ? 'Downloaded' : 'Saved'}, ${bytes(blob.size)}.`;
   }
 
   const refused = 'This export failed a safety check, so it was not made.';
@@ -134,7 +129,7 @@
         kind === 'gif'
           ? await (await import('../core/export/gif')).exportGif(options, onProgress)
           : await (await import('../core/export/video')).exportMp4(options, onProgress);
-      save(blob, RASTER[kind].extension);
+      await save(blob, RASTER[kind].extension);
     } catch (error) {
       if (controller.signal.aborted) status = 'Cancelled.';
       else if (error instanceof Error && error.message.startsWith('Export refused')) status = refused;
@@ -152,7 +147,7 @@
     }
     const text = make();
     if (text === null) return;
-    save(new Blob([text], { type: TEXT[format].type }), TEXT[format].extension);
+    void save(new Blob([text], { type: TEXT[format].type }), TEXT[format].extension);
   }
 
   const hint = $derived(raster ? raster.hint : TEXT[format as TextFormat].hint);

@@ -109,6 +109,7 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 - Values read back from the sandbox (labels, computed fill and stroke) are data. In the app, put them in the DOM as text or through the CSSOM, never by building a `style="…"` or HTML string.
 - Generated exports embed user-derived strings only via `JSON.stringify` (with `<` escaped) or XML escaping. `css.ts` refuses any key that is not `k` plus hex, and any value or easing outside a small character set or with a CSS function other than `translate`, `rotate`, `scale`, `cubic-bezier` and `steps`. It refuses rather than escapes: every value is generated, but the spec behind it comes from storage.
 - Every SVG export goes through `sanitise()` as a final check, with the same rules as uploads, so no `<style>` survives it. Our own style is checked as text by `exportStyleIsSafe()` (no `<`, `>` or `&`, and the same `url()` and CSS-loader check as attributes), then added after the root's start tag as a string. It is never parsed into a DOM on the main thread, because Chromium reports a CSP violation for any `<style>` it parses there, inert document or not. A malformed file, an unexpected root or an unsafe style refuses the export.
+- The VS Code webview has the same policy with VS Code's resource host, `https://*.vscode-resource.vscode-cdn.net`, in place of `'self'`. It is set in `extension/extension.cjs`. Not `webview.cspSource`, which allows all of `*.vscode-cdn.net`, a real CDN. No `frame-src` there either, for the same reason. Section 9.
 - Tests: every payload that normalises is exported, with a spin and a draw if it has anything to animate, checked structurally and detonated as SVG and as the JS snippet. A separate test proves the check refuses remote, `@import`, escaped, entity and breakout styles and malformed files, and strips an authored `<style>`.
 
 ## 3. Spec and IR
@@ -290,6 +291,11 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 - **Linux CI, Chromium text:** text in an `<img>` screenshot is antialiased subpixel, with colour fringes; on a canvas and in live preview it is greyscale. About 0.09% of pixels, all on the glyphs. macOS never does subpixel. Parity runs Chromium with `--disable-lcd-text`.
 - **Unverified, measure in each browser:** Safari `linear()` support since 17.2.
 - **Safari's Tab key:** by default it skips buttons, links and file inputs; only text fields, selects and `tabindex` elements get focus. Option-Tab reaches everything, as does the "Press Tab to highlight each item" setting. Playwright WebKit copies this, so keyboard tests press Alt+Tab there.
+- **VS Code webview, workers:** scripts load from `https://file+.vscode-resource.vscode-cdn.net`, but the document's origin is `vscode-webview://`. A plain `new Worker(url)` fails to load (measured 21 Oct, VS Code 1.142). The extension fetches the worker's source and starts it from a blob URL.
+- **VS Code webview, downloads:** `<a download>` does nothing. Exports go to the extension, which saves them.
+- **Launching VS Code from a script:** run from VS Code's own terminal, `code` and the app binary hand the launch to the open window unless the `VSCODE_*` and `ELECTRON_*` variables are removed. The profile path must stay short, because the socket inside it has a 103-character limit. A fresh profile asks about workspace trust and holds back extension activation until it's answered, so pass `--disable-workspace-trust`. Kill every helper process before reusing a profile, or the next launch is handed to a survivor.
+- **VS Code, checked by Der on his Mac (21 Oct):** ⌘Z and ⇧⌘Z reach the webview, saves, themes and restore all work.
+- **Unverified, VS Code:** MP4 on Windows and Linux, where VS Code may have no H.264 encoder (`canExportMp4` hides it there).
 - **Theme contrast:** daisyUI's stock dark primary is 3.4:1 as text on the dark base, and its secondary and accent fail 4.5:1 in light. `global.css` overrides the dark primary. Don't use secondary or accent for text.
 
 ## 7. Approved dependencies
@@ -311,6 +317,7 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 | @vercel/analytics (2.x) | Page-view counts, on Vercel's builds only | MIT |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
 | animejs (4.x), v1.1 only | Morph resampling utility | MIT |
+| @types/vscode (1.90.0, pinned to the `engines` floor) | Types for the VS Code extension host | MIT |
 
 Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 
@@ -372,3 +379,29 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-15: WCAG 2.2 AA pass. `@axe-core/playwright` scans every page and editor state in both colour schemes; a keyboard-only test runs open to export. The dark theme's primary is overridden for contrast.
 - 2026-10-15: CI runs the browser suites on PRs only, with e2e split by engine. A merge to main re-runs lint, unit and the build guard. Docs-only changes skip CI.
 - 2026-10-21: Vercel Web Analytics counts page views (Der's call; added by Vercel's bot in PR #36). It went in `<head>`, where its custom element closed `<head>` and production ignored the page CSP from 15 to 21 Oct. Moved to the end of `<body>`, rendered only when `VERCEL=1`, because elsewhere its script 404s and fails every e2e console check. CI checks the CSP `<meta>` is in `<head>` on a `VERCEL=1` build. The privacy page now says what it records.
+- 2026-10-21: A VS Code extension, built from the same editor island. A spike in VS Code 1.142 on macOS proved the worker, the sandbox, the clipboard, MP4 and GIF before any planning.
+- 2026-10-21: In VS Code, effects are kept in the extension's own storage, keyed by file, and come back only while the file's SHA-256 is unchanged. Nothing is written beside the SVG. Der's call over a sidecar file. `globalState` rather than `workspaceState`, so a file opened without a folder keeps its effects too.
+- 2026-10-21: The extension ships as a local `.vsix`, zipped by `extension/package.mjs`. Der declined vsce. Marketplace and Open VSX wait for a later stage.
+- 2026-10-21: The extension build resolves Vite and the Svelte plugin from Astro's install. Der declined them as direct dependencies. `@types/vscode` approved.
+- 2026-10-21: Security review of M8. Nothing critical, high or medium. Six lows fixed: smoke mode now acts only on its own test file, saves always answer, the CSP names the resource host and not all of `vscode-cdn.net`, `store` is size-checked, the file size is checked before reading, and messages from child frames are ignored. A smoke check now proves the sandbox inherits the page CSP.
+- 2026-10-21: The smoke mode ships in the package, behind the `ASG_SMOKE` variable, so `smoke.mjs --vsix` tests the exact file people install. The webview loads its checks only when the extension asks.
+
+## 9. VS Code extension
+
+A read-only custom editor for `.svg` in `extension/`. It runs the same editor island as the site, inside a webview. Priority `option`, so plain SVG opening is untouched. Users choose **Open with Animated SVG GO** from the explorer, the editor title bar or the command palette.
+
+```
+extension.cjs (extension host)              webview.ts (webview)
+  reads the file, hashes it        open ->    setHost(vscode), loadText(text, name, spec)
+  globalState {sha256, spec}    <- store      host.store: the spec, debounced as on the site
+  showSaveDialog, writeFile     <- save       host.save: export bytes, answered by "saved"
+```
+
+- **Host seam.** `src/editor/host.ts` holds the four things that differ between site and extension: `kind`, `worker()`, `save()` and `store()`. The web host is the site's code as it was. `webview.ts` sets the VS Code host before the editor mounts. With `kind` set to `vscode`, the editor hides the site links, the file picker, drop and paste: the tab belongs to its file.
+- **Worker.** Fetched once as text, then started from a blob URL. See section 6.
+- **Restore.** Keys are stamped by structure, so a stored spec comes back only for the exact file it was made on. A changed file starts fresh. Restored specs pass `SpecSchema.safeParse`, as the site's autosave does.
+- **Messages.** The extension acts on `ready`, `store` and `save`, and checks each one's shape. `ready` carries the editor's size cap, so the file is checked with `stat` before it is read. `store` takes only a plain object under 256 KB. `save` is always answered, with an error message if the write fails. The webview ignores messages from child frames. The SVG itself never runs (invariants 1 and 2 hold unchanged: `sandbox.ts` is the same code).
+- **Smoke mode** acts only on the copied test file named by `ASG_SMOKE`, so a stray variable in a shell profile can't touch a real file.
+- **Theme.** VS Code's body classes set daisyUI's `data-theme`, light or dark.
+- **Build and package.** `pnpm ext:build` bundles the island into `extension/media` with a relative base. `pnpm ext:package` zips a `.vsix` by hand. CI packages it and checks it carries no test hook.
+- **Smoke test.** `pnpm ext:smoke` launches the local VS Code on a copied corpus file, three times: fresh (sandbox, scripts blocked, clipboard, save, MP4, GIF), reopened (the effect comes back) and changed (it doesn't). `node extension/smoke.mjs --vsix <file>` runs the same against an installed package. Mac, local only: CI has no VS Code.
