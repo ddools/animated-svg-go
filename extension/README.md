@@ -4,6 +4,8 @@ Animate the parts of any SVG, right in VS Code. Pick shapes, add effects, tune t
 
 The same editor as [svgomg.fyi](https://www.svgomg.fyi), in a tab.
 
+![Adding Spin to the sun's rays, Pulse to a star, Float to a cloud and Draw to a hill, then playing the animation](https://raw.githubusercontent.com/ddools/animated-svg-go/main/extension/images/demo.gif)
+
 ## Use it
 
 Right-click an `.svg` file and choose **Open with Animated SVG GO**. Or open the file and press the play button in the editor's title bar.
