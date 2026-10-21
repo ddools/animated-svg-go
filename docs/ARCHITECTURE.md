@@ -384,6 +384,7 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-21: The extension ships as a local `.vsix`, zipped by `extension/package.mjs`. Der declined vsce. Marketplace and Open VSX wait for a later stage.
 - 2026-10-21: The extension build resolves Vite and the Svelte plugin from Astro's install. Der declined them as direct dependencies. `@types/vscode` approved.
 - 2026-10-21: Security review of M8. Nothing critical, high or medium. Six lows fixed: smoke mode now acts only on its own test file, saves always answer, the CSP names the resource host and not all of `vscode-cdn.net`, `store` is size-checked, the file size is checked before reading, and messages from child frames are ignored. A smoke check now proves the sandbox inherits the page CSP.
+- 2026-10-21: Published to the VS Code Marketplace as `ddools.animated-svg-go` 0.1.0, by uploading the hand-zipped `.vsix` on the Marketplace's own page. It passed validation, so vsce is still not needed. Open VSX is next.
 - 2026-10-21: The smoke mode ships in the package, behind the `ASG_SMOKE` variable, so `smoke.mjs --vsix` tests the exact file people install. The webview loads its checks only when the extension asks.
 
 ## 9. VS Code extension

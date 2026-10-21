@@ -135,6 +135,6 @@ Measured: built 21 Oct on `feat/vscode-extension`. The smoke test passes against
 | Mobile and touch support | Sonnet 5.5 | Not a v1 target. Needs iOS canvas and memory limits measured on a real device first |
 | Gradient colour shift | Opus 5.5 | Clone a shared gradient per animated shape in rewrite, animate `stop-color`. Needs `security-reviewer` |
 | Draw "outline then fill" | Sonnet 5.5 | Draw the stroke, then fade in `fill-opacity` |
-| Publish the VS Code extension | Opus 5.5 | Marketplace and Open VSX. Der creates the publisher and tokens. Brings back the vsce question |
+| Publish to Open VSX | Opus 5.5 | For Cursor, Windsurf and VSCodium. Der creates the Eclipse account and `ddools` namespace. May need `ovsx`, a dependency question. The Marketplace went live 21 Oct |
 | VS Code Language Model tools | Opus 5.5 | The WebMCP tools in `agent.ts`, offered to VS Code's agents instead |
 | Lottie | Not planned | Revisit only with real demand, and only for a transform/opacity/trim-path subset |
