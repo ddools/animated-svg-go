@@ -2,7 +2,7 @@
 
 A free, public, browser-only tool. Drop in any SVG, animate its parts with sliders, toggles and pickers, export the result. Think SVGOMG (https://jakearchibald.github.io/svgomg/), but for motion.
 
-Status: M6 done. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 take timelines up to 20 s, measured in Chrome and Safari. Research complete 13 Oct 2026.
+Status: v1 launched 21 Oct 2026 (M7 signed off in Chrome, Firefox and Safari). M8, the VS Code extension, is done and ships as a local `.vsix`. Next is on the roadmap's Later list. Select shapes, add any of nine effects (Spin, Fade, Draw, Pop, Float, Wiggle, Pulse, Slide in, Colour shift), stagger them, pick easings, tune them with generated sliders, drag a pivot, scrub and play a looping timeline, undo and redo. Export an animated SVG, an SVG + CSS snippet, an SVG + JS snippet, a GIF or an MP4. `pnpm parity` proves preview, export, sampler and raster frames agree. The last file and its effects autosave. GIF and MP4 take timelines up to 20 s, measured in Chrome and Safari. Research complete 13 Oct 2026.
 
 Live at https://www.svgomg.fyi (the bare domain redirects there). Vercel project `animated-svg-go` in the `ddools-projects` team; DNS at Porkbun.
 

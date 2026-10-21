@@ -162,6 +162,8 @@ Nothing parked.
 
 Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/playwright`, skip the Fable review, Opus builds items 3 to 5, privacy gets its own page.
 
+Status: done 21 Oct. Der signed off a full pass in Chrome, Firefox and Safari. v1 launched.
+
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
 | 1 | Full security review, upload to export. Re-run payloads | `security-reviewer` | Must pass | ✓ Nothing critical or high. One medium (entity expansion past the size cap), three lows. Payloads 354 passed in Chromium and WebKit. Production build has no test hook. DOMPurify 3.4.17 is the latest, `pnpm audit` clean |
@@ -170,7 +172,7 @@ Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/
 | 4 | Accessibility pass, WCAG 2.2 AA | Opus (Der's call) | Opus reviews | ✓ axe on every page and editor state, both schemes. Fixed: keyboard could not open a file, five contrast failures, small tree targets. Keyboard-only test, open to export |
 | 5 | Landing, about and privacy pages | Opus builds and drafts copy (Der's call) | Der edits the copy | ✓ Merged in PR #28. Der happy with the copy for now, 15 Oct |
 | 6 | Optional whole-architecture review | Fable | Der decides whether to run it | Skipped: Der's call, 15 Oct |
-| 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off |  |
+| 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off | ✓ Signed off by Der, 21 Oct. Every check passed in all three |
 | 8 | Lighter CI. Browser suites on PRs only, e2e split by engine, docs-only changes skip CI | Opus (Der's call, 15 Oct) | | ✓ Merges to main run lint, unit and the build guard. Decision log in ARCHITECTURE |
 
 ## Stage 8. VS Code extension (M8)
