@@ -17,7 +17,8 @@
     "parity": "playwright test -c playwright.parity.config.ts",
     "lint": "eslint . && svelte-check && tsc --noEmit",
     "ext:build": "node extension/build.mjs",
-    "ext:smoke": "node extension/build.mjs && node extension/smoke.mjs"
+    "ext:smoke": "node extension/build.mjs && node extension/smoke.mjs",
+    "ext:package": "node extension/build.mjs && node extension/package.mjs"
   },
   "devDependencies": {
     "@astrojs/svelte": "^9.0.1",
