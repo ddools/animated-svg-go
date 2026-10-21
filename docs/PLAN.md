@@ -184,7 +184,7 @@ Plan approved 21 Oct, after a spike on `spike/vscode-extension`. Built on `feat/
 | 3 | Hand-zipped `.vsix` | Opus | | ✓ Installs, and `smoke.mjs --vsix` passes against it |
 | 4 | CI packages the extension | Opus | | ✓ |
 | 5 | Security review: webview CSP, messages, restore, seam | `security-reviewer` | Must pass | ✓ Nothing critical, high or medium. Six lows fixed, plus a CSP-inheritance check. Smoke 13 checks pass, dev and `.vsix` |
-| 6 | Use it in real VS Code: save dialog per format, themes, ⌘Z, reopen | Der | Sign-off | |
+| 6 | Use it in real VS Code: save dialog per format, themes, ⌘Z, reopen | Der | Sign-off | ✓ Signed off by Der on his Mac, 21 Oct |
 
 ## What only Der can do
 

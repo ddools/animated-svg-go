@@ -294,7 +294,8 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 - **VS Code webview, workers:** scripts load from `https://file+.vscode-resource.vscode-cdn.net`, but the document's origin is `vscode-webview://`. A plain `new Worker(url)` fails to load (measured 21 Oct, VS Code 1.142). The extension fetches the worker's source and starts it from a blob URL.
 - **VS Code webview, downloads:** `<a download>` does nothing. Exports go to the extension, which saves them.
 - **Launching VS Code from a script:** run from VS Code's own terminal, `code` and the app binary hand the launch to the open window unless the `VSCODE_*` and `ELECTRON_*` variables are removed. The profile path must stay short, because the socket inside it has a 103-character limit. A fresh profile asks about workspace trust and holds back extension activation until it's answered, so pass `--disable-workspace-trust`. Kill every helper process before reusing a profile, or the next launch is handed to a survivor.
-- **Unverified, VS Code:** whether ⌘Z reaches the webview or VS Code takes it first. MP4 on Windows and Linux, where VS Code may have no H.264 encoder (`canExportMp4` hides it there).
+- **VS Code, checked by Der on his Mac (21 Oct):** ⌘Z and ⇧⌘Z reach the webview, saves, themes and restore all work.
+- **Unverified, VS Code:** MP4 on Windows and Linux, where VS Code may have no H.264 encoder (`canExportMp4` hides it there).
 - **Theme contrast:** daisyUI's stock dark primary is 3.4:1 as text on the dark base, and its secondary and accent fail 4.5:1 in light. `global.css` overrides the dark primary. Don't use secondary or accent for text.
 
 ## 7. Approved dependencies
