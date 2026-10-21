@@ -1,0 +1,10 @@
+---
+// Vercel Web Analytics: page views only. Goes at the end of <body>, never in <head>. It renders a custom element,
+// the parser closes <head> at one, and the CSP <meta> after it lands in <body>, where browsers ignore it.
+// Only in Vercel's own builds: anywhere else /_vercel/insights doesn't exist, and the 404 fails every console check.
+import VercelAnalytics from '@vercel/analytics/astro';
+
+const onVercel = process.env.VERCEL === '1';
+---
+
+{onVercel && <VercelAnalytics />}

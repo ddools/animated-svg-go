@@ -105,7 +105,7 @@ When sharing arrives: re-sanitise server-side with `isomorphic-dompurify`; serve
 
 ### Always
 
-- The app page has a strict CSP (Astro 7 `security.csp`): `default-src 'none'`, hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`. One deliberate allowance: `style-src-attr 'unsafe-inline'`. Chromium reports a violation the moment it parses any style attribute, even in an inert `DOMParser` or DOMPurify document, and uploaded SVGs carry them. `<style>` elements and stylesheets are still restricted.
+- The app page has a strict CSP (Astro 7 `security.csp`): `default-src 'none'`, hash-based `script-src` and `style-src` in a meta tag, plus `frame-ancestors` and `nosniff` as headers in `vercel.json`. The meta tag only counts inside `<head>`. Any element that doesn't belong there closes `<head>` early and the policy is ignored, so `tests/security/csp-head.mjs` checks every page of a `VERCEL=1` build in CI. One deliberate allowance: `style-src-attr 'unsafe-inline'`. Chromium reports a violation the moment it parses any style attribute, even in an inert `DOMParser` or DOMPurify document, and uploaded SVGs carry them. `<style>` elements and stylesheets are still restricted.
 - Values read back from the sandbox (labels, computed fill and stroke) are data. In the app, put them in the DOM as text or through the CSSOM, never by building a `style="…"` or HTML string.
 - Generated exports embed user-derived strings only via `JSON.stringify` (with `<` escaped) or XML escaping. `css.ts` refuses any key that is not `k` plus hex, and any value or easing outside a small character set or with a CSS function other than `translate`, `rotate`, `scale`, `cubic-bezier` and `steps`. It refuses rather than escapes: every value is generated, but the spec behind it comes from storage.
 - Every SVG export goes through `sanitise()` as a final check, with the same rules as uploads, so no `<style>` survives it. Our own style is checked as text by `exportStyleIsSafe()` (no `<`, `>` or `&`, and the same `url()` and CSS-loader check as attributes), then added after the root's start tag as a string. It is never parsed into a DOM on the main thread, because Chromium reports a CSP violation for any `<style>` it parses there, inert document or not. A malformed file, an unexpected root or an unsafe style refuses the export.
@@ -308,6 +308,7 @@ Measured in the M6 spike, headless on an M-series Mac, inside the editor page wi
 | @tweakpane/plugin-essentials (optional) | Cubic-bezier editor | MIT |
 | vitest, @playwright/test, pixelmatch, pngjs, @types/pngjs, @types/node | Testing | MIT / Apache-2.0 / ISC |
 | @axe-core/playwright | Accessibility checks in e2e (M7) | MPL-2.0 |
+| @vercel/analytics (2.x) | Page-view counts, on Vercel's builds only | MIT |
 | typescript (6.x), eslint, @eslint/js, typescript-eslint, eslint-plugin-svelte, svelte-check | Lint and type checks | Apache-2.0 / MIT |
 | animejs (4.x), v1.1 only | Morph resampling utility | MIT |
 
@@ -370,3 +371,4 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-15: M7 security review, upload to export. Nothing critical or high. Fixed: entity expansion could take a 0.4 MB file to 200 MB past the size cap (medium; the worker now caps its own output). Low: all ARIA ID references namespaced, the CSS snippet's style text-checked, paste inside a text field left to the field. Re-review closed all four.
 - 2026-10-15: WCAG 2.2 AA pass. `@axe-core/playwright` scans every page and editor state in both colour schemes; a keyboard-only test runs open to export. The dark theme's primary is overridden for contrast.
 - 2026-10-15: CI runs the browser suites on PRs only, with e2e split by engine. A merge to main re-runs lint, unit and the build guard. Docs-only changes skip CI.
+- 2026-10-21: Vercel Web Analytics counts page views (Der's call; added by Vercel's bot in PR #36). It went in `<head>`, where its custom element closed `<head>` and production ignored the page CSP from 15 to 21 Oct. Moved to the end of `<body>`, rendered only when `VERCEL=1`, because elsewhere its script 404s and fails every e2e console check. CI checks the CSP `<meta>` is in `<head>` on a `VERCEL=1` build. The privacy page now says what it records.
