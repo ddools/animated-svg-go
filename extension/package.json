@@ -1,0 +1,20 @@
+{
+  "name": "animated-svg-go-spike",
+  "displayName": "Animated SVG GO (spike)",
+  "private": true,
+  "version": "0.0.0",
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./extension.cjs",
+  "activationEvents": ["onStartupFinished"],
+  "scripts": { "build": "node build.mjs" },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "animatedSvgGo.editor",
+        "displayName": "Animated SVG GO",
+        "selector": [{ "filenamePattern": "*.svg" }],
+        "priority": "default"
+      }
+    ]
+  }
+}
