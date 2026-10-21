@@ -173,6 +173,21 @@ Plan approved 15 Oct. Built on `feat/m7-hardening`. Der's calls: add `@axe-core/
 | 7 | Full pass in Chrome, Firefox and Safari | Der | Launch sign-off |  |
 | 8 | Lighter CI. Browser suites on PRs only, e2e split by engine, docs-only changes skip CI | Opus (Der's call, 15 Oct) | | ✓ Merges to main run lint, unit and the build guard. Decision log in ARCHITECTURE |
 
+## Stage 8. VS Code extension (M8)
+
+Plan approved 21 Oct, after a spike on `spike/vscode-extension`. Built on `feat/vscode-extension`. Der's calls: effects in VS Code's storage, not a sidecar file; a local `.vsix` only; `@types/vscode` approved, vsce and direct Vite deps declined.
+
+| # | Action | Owner | Gate | Done |
+| --- | --- | --- | --- | --- |
+| 1 | Host seam for worker, save and autosave. Site behaviour unchanged | Opus | `webkit-checker` | ✓ e2e 676 passed in Chromium and WebKit, run with `<Analytics />` off (see the note below). Opus ran WebKit directly |
+| 2 | Custom editor, webview host, restore rule, smoke checks | Opus | | ✓ `pnpm ext:smoke`: 12 checks pass in VS Code 1.142 |
+| 3 | Hand-zipped `.vsix` | Opus | | ✓ Installs, and `smoke.mjs --vsix` passes against it |
+| 4 | CI packages the extension | Opus | | ✓ |
+| 5 | Security review: webview CSP, messages, restore, seam | `security-reviewer` | Must pass | |
+| 6 | Use it in real VS Code: save dialog per format, themes, ⌘Z, reopen | Der | Sign-off | |
+
+Note: on main, `<Analytics />` in `Head.astro` puts a custom element in `<head>`. The parser closes `<head>` there, so the page CSP `<meta>` ends up in `<body>` and is ignored, live too. Every e2e console check fails on it. Reported to Der, 21 Oct. Not fixed on this branch.
+
 ## What only Der can do
 
 - Create and link the GitHub and Vercel accounts.

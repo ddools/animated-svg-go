@@ -19,7 +19,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Locked decisions
 
-- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Local-first: every byte of a user's file stays in the browser in v1. No server storage, no uploads. Page views are counted with Vercel Web Analytics, and the privacy page says what it records.
+- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Plus a VS Code extension (M8), tested in VS Code on Mac. Local-first: every byte of a user's file stays in the browser in v1. No server storage, no uploads. Page views are counted with Vercel Web Analytics, and the privacy page says what it records.
 - **v1 exports:** animated SVG with embedded CSS, inline SVG + CSS snippet, JS (WAAPI) snippet, GIF, MP4.
 - **Not in v1:** path morphing (v1.1), Lottie export (deferred, likely never), sharing links (later, via Vercel Blob).
 - **Stack:** Astro 7, one Svelte 5 editor island (`client:only="svelte"`), Tailwind 4, daisyUI 5, Vercel static hosting, GitHub Actions.
@@ -62,6 +62,7 @@ tests/
   corpus/                   Real-world SVGs, LICENCES.md, known-failures.json, the pixel-diff harness
   security/                 XSS payloads and the spec that detonates pipeline output unsandboxed
   parity/                   pnpm parity: preview against CSS export against sampler
+extension/                  VS Code custom editor: extension.cjs (host), webview.ts (island + VS Code host), checks.ts, build, package and smoke scripts
 docs/                       ARCHITECTURE.md, ROADMAP.md, MODELS.md
 .claude/agents/             Project subagents (see docs/MODELS.md)
 ```
@@ -76,6 +77,9 @@ pnpm test:e2e       Playwright, all three engines
 pnpm corpus         Normalise every file in tests/corpus, pixel-diff before against after (Chromium, WebKit)
 pnpm parity         Compare WAAPI preview, CSS-in-<img> export and sampler frames (Chromium, WebKit)
 pnpm lint           ESLint + svelte-check + tsc --noEmit
+pnpm ext:build      Build the editor island into extension/media
+pnpm ext:smoke      Build, then run the webview checks in the local VS Code (Mac). --vsix <file> checks a package
+pnpm ext:package    Build and zip extension/animated-svg-go-<version>.vsix
 ```
 
 ## How to work in this repo
@@ -119,3 +123,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - Safari's Tab skips buttons and file inputs by default. Keyboard tests press Alt+Tab in WebKit. Never hide a file input with `display: none`: use `sr-only`.
 - daisyUI's secondary and accent fail text contrast. Don't use them for text.
 - Agent worktrees live in `.claude/worktrees/`. Lint, `tsc` and git ignore them.
+- Anything that differs between the site and VS Code goes through `src/editor/host.ts`. Don't test for VS Code anywhere else.
+- In a VS Code webview, a plain worker fails to load and `<a download>` does nothing. The VS Code host handles both.
+- Launching VS Code from its own terminal hands off to the open window. `pnpm ext:smoke` strips the variables, keeps the profile path short, and kills every helper. Use it rather than launching by hand.
+- `import('./x')` in `extension/` finds `x.mjs` before `x.ts`. Don't give a webview module the same name as a script.
