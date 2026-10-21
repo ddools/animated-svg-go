@@ -3,7 +3,9 @@ import '../src/styles/global.css';
 import { mount } from 'svelte';
 import App from '../src/editor/App.svelte';
 import { setHost } from '../src/editor/host';
-import { loadText } from '../src/editor/load';
+import { fail, loadText } from '../src/editor/load';
+import { editor } from '../src/editor/state.svelte';
+import { LIMITS } from '../src/core/parse/limits';
 import { SpecSchema } from '../src/core/spec/schema';
 import workerUrl from '../src/workers/pipeline.worker.ts?worker&url';
 
@@ -12,7 +14,8 @@ declare function acquireVsCodeApi(): VsCode;
 const vscode = acquireVsCodeApi();
 
 type FromHost =
-  | { type: 'open'; name: string; text: string; spec?: unknown; smoke?: string }
+  | { type: 'open'; name: string; text: string; spec?: unknown; smoke?: string; tooLarge?: false }
+  | { type: 'open'; name: string; tooLarge: true }
   | { type: 'saved'; id: number; ok: boolean };
 
 // Webview scripts come from another origin than the document, and a plain worker from there fails to load.
@@ -47,10 +50,16 @@ new MutationObserver(theme).observe(document.body, { attributes: true, attribute
 mount(App, { target: document.body });
 
 addEventListener('message', (event: MessageEvent<FromHost>) => {
+  // Only the extension talks to us. Child frames (the sandbox) never may, even if layer 2 failed.
+  // Not a window.parent check: VS Code's own script replaces it.
+  for (let i = 0; i < frames.length; i++) if (event.source === frames[i]) return;
   const message = event.data;
   if (message.type === 'saved') {
     saves.get(message.id)?.(message.ok);
     saves.delete(message.id);
+  } else if (message.type === 'open' && message.tooLarge) {
+    editor.fileName = message.name;
+    fail('too-large');
   } else if (message.type === 'open') {
     // Storage is not trusted: the spec goes back through the schema, as the site's autosave does.
     const spec = SpecSchema.safeParse(message.spec);
@@ -58,4 +67,5 @@ addEventListener('message', (event: MessageEvent<FromHost>) => {
     if (message.smoke) void import('./checks').then(({ checks }) => checks(message.smoke!, vscode));
   }
 });
-vscode.postMessage({ type: 'ready' });
+// The extension checks the file against the editor's own cap before reading it.
+vscode.postMessage({ type: 'ready', maxBytes: LIMITS.bytes });

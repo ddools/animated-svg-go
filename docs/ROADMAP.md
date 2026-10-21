@@ -122,7 +122,7 @@ The same editor as a custom editor for `.svg` in VS Code. A spike on 21 Oct prov
 
 Done when: `pnpm ext:smoke` passes against the packaged `.vsix`, `security-reviewer` finds nothing critical or high, and Der has used it in his own VS Code on his Mac.
 
-Measured: built 21 Oct on `feat/vscode-extension`. The smoke test passes against the dev folder and against the installed `.vsix` in VS Code 1.142. Waiting on the security review and Der's pass.
+Measured: built 21 Oct on `feat/vscode-extension`. The smoke test passes against the dev folder and against the installed `.vsix` in VS Code 1.142. Security review: nothing critical, high or medium; six lows fixed. Waiting on Der's pass.
 
 ## Later
 

@@ -61,8 +61,26 @@ export async function checks(phase: string, vscode: VsCode): Promise<void> {
       if ((window as { __smokeEscaped?: boolean }).__smokeEscaped) throw new Error('script ran inside the sandbox');
       return 'script in the sandbox did not run';
     });
+    await check('page CSP inherited', async () => {
+      // The sandbox has its own deny-all policy too. The page's is the one that names VS Code's resource host.
+      const doc = document.querySelector('iframe')!.contentDocument!;
+      const policies: string[] = [];
+      doc.addEventListener('securitypolicyviolation', (event) => policies.push(event.originalPolicy));
+      const image = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+      image.setAttribute('href', 'https://example.com/smoke.png');
+      doc.querySelector('svg')!.append(image);
+      await until(() => policies.some((policy) => policy.includes('vscode-resource')), 'a page CSP violation');
+      image.remove();
+      return `${policies.length} policies blocked a remote image, the page's among them`;
+    });
     await check('clipboard', async () => {
-      await navigator.clipboard.writeText('Animated SVG GO smoke');
+      try {
+        await navigator.clipboard.writeText('Animated SVG GO smoke');
+      } catch (error) {
+        // The clipboard needs OS focus, and the test window doesn't always get it. A person clicking Copy has it.
+        if (error instanceof DOMException && error.message.includes('not focused')) return 'skipped: the test window had no focus';
+        throw error;
+      }
       return 'navigator.clipboard.writeText worked';
     });
     await check('save', async () => {
