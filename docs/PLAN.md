@@ -179,14 +179,12 @@ Plan approved 21 Oct, after a spike on `spike/vscode-extension`. Built on `feat/
 
 | # | Action | Owner | Gate | Done |
 | --- | --- | --- | --- | --- |
-| 1 | Host seam for worker, save and autosave. Site behaviour unchanged | Opus | `webkit-checker` | ✓ e2e 676 passed in Chromium and WebKit, run with `<Analytics />` off (see the note below). Opus ran WebKit directly |
+| 1 | Host seam for worker, save and autosave. Site behaviour unchanged | Opus | `webkit-checker` | ✓ e2e 676 passed in Chromium and WebKit. Analytics was switched off locally for that run, until #37 fixed its CSP fault on main. Opus ran WebKit directly |
 | 2 | Custom editor, webview host, restore rule, smoke checks | Opus | | ✓ `pnpm ext:smoke`: 12 checks pass in VS Code 1.142 |
 | 3 | Hand-zipped `.vsix` | Opus | | ✓ Installs, and `smoke.mjs --vsix` passes against it |
 | 4 | CI packages the extension | Opus | | ✓ |
 | 5 | Security review: webview CSP, messages, restore, seam | `security-reviewer` | Must pass | ✓ Nothing critical, high or medium. Six lows fixed, plus a CSP-inheritance check. Smoke 13 checks pass, dev and `.vsix` |
 | 6 | Use it in real VS Code: save dialog per format, themes, ⌘Z, reopen | Der | Sign-off | |
-
-Note: on main, `<Analytics />` in `Head.astro` puts a custom element in `<head>`. The parser closes `<head>` there, so the page CSP `<meta>` ends up in `<body>` and is ignored, live too. Every e2e console check fails on it. Reported to Der, 21 Oct. Not fixed on this branch.
 
 ## What only Der can do
 
