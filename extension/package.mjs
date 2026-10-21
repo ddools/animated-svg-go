@@ -13,7 +13,7 @@ const vsix = `${dir}${pkg.name}-${pkg.version}.vsix`;
 
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(`${stage}/extension`, { recursive: true });
-for (const file of ['package.json', 'extension.cjs', 'README.md']) copyFileSync(`${dir}${file}`, `${stage}/extension/${file}`);
+for (const file of ['package.json', 'extension.cjs', 'README.md', 'CHANGELOG.md']) copyFileSync(`${dir}${file}`, `${stage}/extension/${file}`);
 cpSync(`${dir}media`, `${stage}/extension/media`, { recursive: true });
 copyFileSync(`${root}public/apple-touch-icon.png`, `${stage}/extension/icon.png`);
 copyFileSync(`${root}LICENSE`, `${stage}/extension/LICENSE.txt`);
@@ -28,6 +28,7 @@ writeFileSync(
     <Identity Language="en-US" Id="${xml(pkg.name)}" Version="${xml(pkg.version)}" Publisher="${xml(pkg.publisher)}" />
     <DisplayName>${xml(pkg.displayName)}</DisplayName>
     <Description xml:space="preserve">${xml(pkg.description)}</Description>
+    <Tags>${xml(pkg.keywords.join(','))}</Tags>
     <Categories>${xml(pkg.categories.join(','))}</Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
@@ -42,6 +43,7 @@ writeFileSync(
   <Assets>
     ${asset('Microsoft.VisualStudio.Code.Manifest', 'package.json')}
     ${asset('Microsoft.VisualStudio.Services.Content.Details', 'README.md')}
+    ${asset('Microsoft.VisualStudio.Services.Content.Changelog', 'CHANGELOG.md')}
     ${asset('Microsoft.VisualStudio.Services.Content.License', 'LICENSE.txt')}
     ${asset('Microsoft.VisualStudio.Services.Icons.Default', 'icon.png')}
   </Assets>
