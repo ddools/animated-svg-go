@@ -19,7 +19,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Locked decisions
 
-- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Local-first: every byte stays in the browser in v1. No server storage, no uploads.
+- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Local-first: every byte of a user's file stays in the browser in v1. No server storage, no uploads. Page views are counted with Vercel Web Analytics, and the privacy page says what it records.
 - **v1 exports:** animated SVG with embedded CSS, inline SVG + CSS snippet, JS (WAAPI) snippet, GIF, MP4.
 - **Not in v1:** path morphing (v1.1), Lottie export (deferred, likely never), sharing links (later, via Vercel Blob).
 - **Stack:** Astro 7, one Svelte 5 editor island (`client:only="svelte"`), Tailwind 4, daisyUI 5, Vercel static hosting, GitHub Actions.
@@ -104,6 +104,7 @@ One-line summaries. Detail, bug numbers and the unverified list live in `docs/AR
 - The sanitiser parses as HTML. An unknown element inside `<svg>` can close it and drop the drawing. `optimise.ts` removes non-SVG elements first for this reason.
 - DOMPurify blocks `<use>` and strips ids that shadow DOM properties by default. Both are overridden in `sanitise.ts`, with the reasons beside them. Don't "tidy" them away.
 - Chromium logs a CSP violation as soon as it parses a `<style>` element or (without our `style-src-attr` allowance) a style attribute, even in an inert document. If CSP errors appear in the console, look for markup being parsed on the main thread. This is why an export's own `<style>` is checked as text and spliced in, never sanitised as markup.
+- The CSP is a `<meta>`, and it only counts inside `<head>`. A custom element there (Vercel Analytics renders one) closes `<head>` early and the policy is silently ignored. Analytics lives at the end of `<body>`, in `src/components/Analytics.astro`. CI's `tests/security/csp-head.mjs` checks every page.
 - An SVG in `<img>` does not see `prefers-reduced-motion` (both engines, under Playwright emulation). Test reduced motion on inline exports. Real macOS behaviour is unverified.
 - On CI's Linux runner, an SVG in `<img>` in WebKit doesn't match `prefers-reduced-motion: no-preference`, and Chromium antialiases its text subpixel. Parity opens the gate and passes `--disable-lcd-text`. Don't loosen the tolerance for either.
 - The Svelte island hydrates after page load. In tests, wait for `window.__asg` before dispatching events the app listens for.

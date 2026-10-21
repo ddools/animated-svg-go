@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Analytics from '../components/Analytics.astro';
 import Head from '../components/Head.astro';
 import App from '../editor/App.svelte';
 ---
@@ -19,6 +20,7 @@ import App from '../editor/App.svelte';
         <noscript><p>The editor needs JavaScript. Turn it on and reload.</p></noscript>
       </div>
     </App>
+    <Analytics />
   </body>
 </html>
 

@@ -26,8 +26,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test
-      - name: Production build has no test hooks
-        run: pnpm build && ! grep -rq __asg dist
+      # VERCEL=1 builds as Vercel does, with analytics in, so the CSP check sees what production serves.
+      - name: Production build has no test hooks, and its CSP is in <head>
+        run: VERCEL=1 pnpm build && ! grep -rq __asg dist && node tests/security/csp-head.mjs
 
   e2e:
     if: github.event_name == 'pull_request'

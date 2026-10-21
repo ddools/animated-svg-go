@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Analytics from '../components/Analytics.astro';
 import Head from '../components/Head.astro';
 
 interface Props {
@@ -43,5 +44,6 @@ const links = [
     <footer class="border-base-300 border-t">
       <p class="mx-auto max-w-5xl px-6 py-4 text-sm">Free. No accounts. Your files never leave your browser.</p>
     </footer>
+    <Analytics />
   </body>
 </html>
