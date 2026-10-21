@@ -12,6 +12,8 @@
 <p align="center">
   <a href="https://www.svgomg.fyi"><strong>Open the editor →</strong></a>
   &nbsp;·&nbsp;
+  <a href="https://marketplace.visualstudio.com/items?itemName=ddools.animated-svg-go">VS Code extension</a>
+  &nbsp;·&nbsp;
   <a href="https://www.svgomg.fyi/about">About</a>
   &nbsp;·&nbsp;
   <a href="https://www.svgomg.fyi/privacy">Privacy</a>
@@ -19,6 +21,7 @@
 
 <p align="center">
   <a href="https://github.com/ddools/animated-svg-go/actions/workflows/ci.yml"><img src="https://github.com/ddools/animated-svg-go/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=ddools.animated-svg-go"><img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC" alt="On the VS Code Marketplace"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="MIT licence"></a>
 </p>
 
@@ -69,9 +72,19 @@ Every effect has a start, duration, run count, direction and easing. Easings inc
 
 The SVG, CSS and JS exports stop moving for anyone who has asked their system for less motion (`prefers-reduced-motion`). None of them need a runtime library.
 
+## In VS Code
+
+The same editor runs inside VS Code. Install [Animated SVG GO from the Marketplace](https://marketplace.visualstudio.com/items?itemName=ddools.animated-svg-go), or run:
+
+```sh
+code --install-extension ddools.animated-svg-go
+```
+
+Right-click any `.svg` and choose **Open with Animated SVG GO**. Exports are saved where you choose, your SVG is never changed, and your effects come back when you reopen the file. Tested in VS Code on Mac.
+
 ## Your files stay with you
 
-Everything runs in your browser. There is no server, no upload and no account. The live site is static files.
+Everything runs in your browser. There is no server, no upload and no account. The live site is static files. Page views are counted with Vercel Web Analytics; the [privacy page](https://www.svgomg.fyi/privacy) says what it records. Your files are never part of it.
 
 Uploaded SVG is treated as hostile:
 
@@ -104,7 +117,7 @@ The full design, including the platform traps it works around, is in [docs/ARCHI
 
 ## Browser support
 
-Chrome, Firefox and Safari on desktop. Phones and tablets aren't supported yet.
+Chrome, Firefox and Safari on desktop, plus [VS Code](#in-vs-code). Phones and tablets aren't supported yet.
 
 ## Run it locally
 
@@ -126,6 +139,8 @@ pnpm dev
 | `pnpm corpus` | Runs real-world SVGs through the pipeline and pixel-diffs before against after |
 | `pnpm parity` | Checks preview, CSS export and sampler frames agree |
 | `pnpm lint` | ESLint, svelte-check and `tsc` |
+| `pnpm ext:package` | Builds the VS Code extension into `extension/animated-svg-go-<version>.vsix` |
+| `pnpm ext:smoke` | Runs the extension's checks in your local VS Code (Mac) |
 
 Run `pnpm exec playwright install` once before the browser suites.
 
@@ -142,6 +157,7 @@ src/
     backends/   WAAPI, CSS, JS snippet, sampler
     export/     Frame loop, GIF, MP4
   workers/      The SVGO pass
+extension/      The VS Code extension: the same editor in a webview
 tests/          unit, e2e, corpus, security, parity
 docs/           Architecture, roadmap, plan
 ```
