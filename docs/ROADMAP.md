@@ -107,7 +107,7 @@ Lead: Opus 5.5. Fable 5.1 optional for a final cross-cutting architecture review
 
 Done when: Der signs off on a pass through Chrome, Firefox and Safari on his Mac.
 
-Measured: built 15 Oct, waiting on Der's pass. Security review: nothing critical or high; one medium and four lows fixed and re-reviewed. Caps: preview cost follows drawing size, so big files get a note, not a refusal; effects stop at 200. axe finds nothing in Chromium or WebKit. Pages drafted; Der edits the copy.
+Measured: built 15 Oct. Der signed off a full pass in Chrome, Firefox and Safari on 21 Oct: v1 launched. Security review: nothing critical or high; one medium and four lows fixed and re-reviewed. Caps: preview cost follows drawing size, so big files get a note, not a refusal; effects stop at 200. axe finds nothing in Chromium or WebKit. Pages drafted; Der edits the copy.
 
 ## M8. VS Code extension
 
