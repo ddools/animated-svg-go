@@ -1,12 +1,13 @@
 import { normalise, type Normalised } from '../core/parse';
 import { LIMITS, PipelineError, type PipelineErrorCode } from '../core/parse/limits';
 import type { Optimised } from '../core/parse/optimise';
+import { host } from './host';
 
 type Reply = ({ ok: true } & Optimised) | { ok: false; code: PipelineErrorCode; message: string };
 
 // A fresh worker per file, so a hung SVGO run can simply be terminated.
 function optimiseInWorker(svg: string): Promise<Optimised> {
-  const worker = new Worker(new URL('../workers/pipeline.worker.ts', import.meta.url), { type: 'module' });
+  const worker = host.worker();
   return new Promise<Optimised>((resolve, reject) => {
     const timer = setTimeout(
       () => reject(new PipelineError('timeout', 'This file took too long to process.')),

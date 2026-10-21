@@ -1,14 +1,12 @@
-import { get, set } from 'idb-keyval';
+import { get } from 'idb-keyval';
 import type { InventoryNode } from '../core/parse/inventory';
 import { newSpec, SpecSchema, type Effect, type Spec } from '../core/spec/schema';
+import { host, SAVE_KEY, type Saved } from './host';
 
 // The spec is the only document state (invariant 5). Undo keeps whole snapshots:
 // a spec is a few KB, so structuredClone is cheaper to reason about than patches.
 const HISTORY = 100;
-const SAVE_KEY = 'project';
 const SAVE_DELAY = 500;
-
-type Saved = { fileName: string; text: string; spec: unknown };
 
 class Project {
   spec = $state.raw<Spec>(newSpec());
@@ -111,7 +109,7 @@ class Project {
   save() {
     const saved: Saved = { fileName: this.fileName, text: this.text, spec: this.spec };
     clearTimeout(this.#saveTimer);
-    this.#saveTimer = setTimeout(() => void set(SAVE_KEY, saved).catch(() => {}), SAVE_DELAY);
+    this.#saveTimer = setTimeout(() => host.store(saved), SAVE_DELAY);
   }
 
   #changed(change: (spec: Spec) => void): Spec {
