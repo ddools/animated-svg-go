@@ -64,6 +64,14 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('float'), params: FloatParams }),
 ]);
 
+/** Changes to the drawing itself, replayed in order over the normalised file by core/parse/edit.ts. */
+export const StructureOpSchema = z.object({
+  op: z.enum(['delete', 'duplicate', 'group']),
+  keys: z.array(key).min(1).max(20_000),
+  /** Random. New keys are derived from it, so a replay always makes the same ones. */
+  seed: z.int().min(0).max(2 ** 32 - 1),
+});
+
 export const SpecSchema = z.object({
   version: z.literal(1),
   /** Seconds. */
@@ -71,6 +79,7 @@ export const SpecSchema = z.object({
   loop: z.boolean(),
   /** Layer names the user typed, by key. Editor only: never exported, never compiled. */
   names: z.record(key, z.string().min(1).max(100)).optional(),
+  structure: z.array(StructureOpSchema).max(500).optional(),
   effects: z
     .array(EffectSchema)
     .max(MAX_EFFECTS)
@@ -88,6 +97,7 @@ export type Timing = z.infer<typeof TimingSchema>;
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = Effect['type'];
 export type Spec = z.infer<typeof SpecSchema>;
+export type StructureOp = z.infer<typeof StructureOpSchema>;
 
 /** A control in the generated panel, for one key of an effect's params. */
 export type Control = { key: string; label: string } & (

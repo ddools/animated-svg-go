@@ -12,19 +12,23 @@ export type Normalised = {
   timings: { optimise: number; sanitise: number; rewrite: number };
 };
 
-function enforceTreeLimits(root: Element): void {
+/** Scale 2 checks a rewritten tree: every animatable element has gained a wrapper. */
+export function enforceTreeLimits(root: Element, scale = 1): void {
   const count = root.querySelectorAll('*').length + 1;
-  if (count > LIMITS.elements) {
-    throw new PipelineError('too-many-elements', `${count} elements. The limit is ${LIMITS.elements}.`);
+  const elements = LIMITS.elements * scale;
+  const expanded = LIMITS.expanded * scale;
+  const deepest = LIMITS.depth * scale;
+  if (count > elements) {
+    throw new PipelineError('too-many-elements', `${count} elements. The limit is ${elements}.`);
   }
-  if (expandedSize(root) > LIMITS.expanded) {
-    throw new PipelineError('too-many-elements', `More than ${LIMITS.expanded} shapes once every <use> is expanded.`);
+  if (expandedSize(root, expanded) > expanded) {
+    throw new PipelineError('too-many-elements', `More than ${expanded} shapes once every <use> is expanded.`);
   }
   // Leaves are the deepest nodes, so only they need measuring.
   for (const leaf of root.querySelectorAll('*:not(:has(*))')) {
     let depth = 0;
     for (let node: Element | null = leaf; node && node !== root; node = node.parentElement) depth++;
-    if (depth > LIMITS.depth) throw new PipelineError('too-deep', `Nested deeper than ${LIMITS.depth} levels.`);
+    if (depth > deepest) throw new PipelineError('too-deep', `Nested deeper than ${deepest} levels.`);
   }
 }
 
@@ -32,7 +36,7 @@ function enforceTreeLimits(root: Element): void {
  * Element count once every <use> is expanded, capped just past the limit.
  * Iterative, because a chain of <use> can be as long as the element limit.
  */
-function expandedSize(root: Element): number {
+function expandedSize(root: Element, cap: number): number {
   const byId = new Map<string, Element>();
   for (const element of root.querySelectorAll('[id]')) {
     if (!byId.has(element.id)) byId.set(element.id, element);
@@ -66,7 +70,7 @@ function expandedSize(root: Element): number {
     }
     let total = 1;
     for (const part of parts) total += size.get(part) ?? 0;
-    size.set(element, Math.min(total, LIMITS.expanded + 1));
+    size.set(element, Math.min(total, cap + 1));
     open.delete(element);
     stack.pop();
   }
