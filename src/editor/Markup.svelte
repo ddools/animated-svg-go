@@ -1,7 +1,7 @@
 <script lang="ts">
   import { animatedSvg } from '../core/backends/css';
   import { playback } from './playback.svelte';
-  import { editor } from './state.svelte';
+  import { project } from './project.svelte';
 
   // Past this, colouring makes too many nodes to stay quick. Shown plain instead.
   const COLOUR_LIMIT = 300_000;
@@ -24,7 +24,7 @@
 
   // What Download gives for Animated SVG. Built a moment after edits stop: on a large file it takes a while.
   $effect(() => {
-    const svg = editor.result?.svg;
+    const svg = project.drawing?.svg;
     const ir = playback.ir;
     if (!svg) return;
     const timer = setTimeout(() => {

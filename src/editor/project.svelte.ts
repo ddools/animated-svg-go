@@ -1,7 +1,9 @@
 import { get } from 'idb-keyval';
+import { applyStructure } from '../core/parse/edit';
 import type { InventoryNode } from '../core/parse/inventory';
 import { newSpec, SpecSchema, type Effect, type Spec } from '../core/spec/schema';
 import { host, SAVE_KEY, type Saved } from './host';
+import { editor } from './state.svelte';
 
 // The spec is the only document state (invariant 5). Undo keeps whole snapshots:
 // a spec is a few KB, so structuredClone is cheaper to reason about than patches.
@@ -17,6 +19,10 @@ class Project {
   /** The original file, kept for autosave. Restore runs it through the pipeline again. */
   fileName = '';
   text = '';
+  // A string, so effect edits and slider drags, which leave it equal, don't reparse the drawing.
+  #structure = $derived(JSON.stringify(this.spec.structure ?? []));
+  /** The drawing with the spec's structure ops applied: what the preview and every export show. */
+  drawing = $derived(editor.result && applyStructure(editor.result.svg, editor.result.labels, JSON.parse(this.#structure)));
   #dragBase: Spec | null = null;
   #saveTimer: ReturnType<typeof setTimeout> | undefined;
 

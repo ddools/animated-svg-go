@@ -19,7 +19,7 @@
   import { normaliseFile } from './pipeline';
   import { playback } from './playback.svelte';
   import { project } from './project.svelte';
-  import { selection } from './selection.svelte';
+  import { deleteSelected, duplicateSelected, groupSelected, selection } from './selection.svelte';
   import { editor } from './state.svelte';
 
   // Test hooks. Only present in builds made with PUBLIC_E2E set, never in production.
@@ -80,8 +80,28 @@
     playback.seek(Math.min(project.spec.duration, Math.max(0, to)));
   }
 
+  /** Delete or Backspace, ⌘D and ⌘G edit the selected layers. Not while typing or choosing. */
+  function layerKeys(event: KeyboardEvent): boolean {
+    const target = event.target as HTMLElement;
+    const type = (target as HTMLInputElement).type;
+    if (target.localName === 'select' || target.localName === 'textarea' || target.isContentEditable) return false;
+    if (target.localName === 'input' && !['checkbox', 'button', 'range'].includes(type)) return false;
+    if (event.altKey || event.shiftKey || !selection.keys.size) return false;
+    const key = event.key.toLowerCase();
+    const action =
+      event.metaKey || event.ctrlKey
+        ? { d: duplicateSelected, g: groupSelected }[key]
+        : key === 'delete' || key === 'backspace'
+          ? deleteSelected
+          : undefined;
+    if (!action) return false;
+    event.preventDefault();
+    action();
+    return true;
+  }
+
   function keydown(event: KeyboardEvent) {
-    if (editor.status !== 'ready') return;
+    if (editor.status !== 'ready' || layerKeys(event)) return;
     if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return transport(event);
     // Text and number fields keep their own undo.
     const field = event.target as HTMLInputElement;
@@ -154,7 +174,7 @@
           </div>
           <div class="canvas relative min-h-0 flex-1 p-6" data-testid="canvas">
             <div class="relative h-full">
-              <Sandbox result={editor.result} />
+              <Sandbox />
               {#if editor.inventory}<Overlay />{/if}
             </div>
             <!-- Over the drawing, not instead of it: unmounting the sandbox would rebuild it on the way back. -->

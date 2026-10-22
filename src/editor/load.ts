@@ -2,7 +2,7 @@ import { LIMITS, PipelineError, type PipelineErrorCode } from '../core/parse/lim
 import { normaliseFile } from './pipeline';
 import { project } from './project.svelte';
 import type { Spec } from '../core/spec/schema';
-import { selection } from './selection.svelte';
+import { selection, tree } from './selection.svelte';
 import { editor } from './state.svelte';
 
 const MESSAGES: Record<PipelineErrorCode, string> = {
@@ -28,6 +28,7 @@ export async function loadText(text: string, name = 'Pasted SVG', spec?: Spec): 
     editor.sandbox = undefined;
     editor.inventory = undefined;
     selection.clear();
+    tree.reset();
     project.open(name, text, spec);
     editor.result = result;
     editor.status = 'ready';

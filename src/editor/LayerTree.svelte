@@ -2,7 +2,7 @@
   import { tick, untrack } from 'svelte';
   import type { InventoryNode } from '../core/parse/inventory';
   import { project } from './project.svelte';
-  import { selection, visibleChildren } from './selection.svelte';
+  import { selection, tree, visibleChildren } from './selection.svelte';
   import { editor } from './state.svelte';
 
   // Rows are a fixed height so only the visible ones need to exist. Map files put
@@ -12,9 +12,8 @@
 
   type Row = { node: InventoryNode; depth: number; kids: number };
 
-  let expanded = $state.raw<ReadonlySet<string>>(new Set());
-  /** Hidden in the preview only. Not in the spec, not in exports, gone with the next file. */
-  let hidden = $state.raw<ReadonlySet<string>>(new Set());
+  /** Where the last plain or ⌘ click landed. Shift-click selects every row from here. */
+  let anchor: string | null = null;
   let renaming = $state<string | null>(null);
   let focused = $state(0);
   let scrollTop = $state(0);
@@ -31,7 +30,7 @@
         if (node.referenced) continue;
         const kids = visibleChildren(node);
         out.push({ node, depth, kids: kids.length });
-        if (expanded.has(key)) visit(kids, depth + 1);
+        if (tree.expanded.has(key)) visit(kids, depth + 1);
       }
     };
     visit(inventory.roots, 0);
@@ -44,14 +43,14 @@
   const name = (node: InventoryNode) => project.nameOf(node);
 
   function hiddenAbove(node: InventoryNode): boolean {
-    for (let key = node.parent; key; key = inventory.nodes.get(key)!.parent) if (hidden.has(key)) return true;
+    for (let key = node.parent; key; key = inventory.nodes.get(key)!.parent) if (tree.hidden.has(key)) return true;
     return false;
   }
 
   function toggleHidden(key: string) {
-    const next = new Set(hidden);
+    const next = new Set(tree.hidden);
     if (!next.delete(key)) next.add(key);
-    hidden = next;
+    tree.hidden = next;
   }
 
   // Visibility, not display: a hidden shape still measures, so its box and pivot stay right.
@@ -61,7 +60,7 @@
     const sandbox = editor.sandbox;
     if (!sandbox) return;
     const targets: SVGElement[] = [];
-    for (const key of hidden) {
+    for (const key of tree.hidden) {
       const element = sandbox.elementFor(key);
       const target = inventory.nodes.get(key)?.wrapped ? element?.parentElement : element;
       if (!(target instanceof sandbox.root.ownerDocument.defaultView!.SVGElement)) continue;
@@ -84,10 +83,10 @@
   }
 
   function setExpanded(key: string, open: boolean) {
-    const next = new Set(expanded);
+    const next = new Set(tree.expanded);
     if (open) next.add(key);
     else next.delete(key);
-    expanded = next;
+    tree.expanded = next;
   }
 
   async function focusRow(index: number) {
@@ -103,6 +102,14 @@
   function choose(key: string, additive: boolean) {
     if (additive) selection.toggle(key);
     else selection.set([key]);
+  }
+
+  function click(index: number, event: MouseEvent) {
+    focused = index;
+    const from = event.shiftKey ? rows.findIndex((row) => row.node.key === anchor) : -1;
+    if (from >= 0) return selection.set(rows.slice(Math.min(from, index), Math.max(from, index) + 1).map((row) => row.node.key));
+    anchor = rows[index].node.key;
+    choose(anchor, event.metaKey || event.shiftKey);
   }
 
   function keydown(event: KeyboardEvent) {
@@ -123,11 +130,11 @@
         void focusRow(rows.length - 1);
         break;
       case 'ArrowRight':
-        if (row.kids && !expanded.has(key)) setExpanded(key, true);
+        if (row.kids && !tree.expanded.has(key)) setExpanded(key, true);
         else if (row.kids) void focusRow(focused + 1);
         break;
       case 'ArrowLeft':
-        if (expanded.has(key)) setExpanded(key, false);
+        if (tree.expanded.has(key)) setExpanded(key, false);
         else if (row.node.parent) void focusRow(rows.findIndex((r) => r.node.key === row.node.parent));
         break;
       case 'Enter':
@@ -154,7 +161,7 @@
     untrack(() => {
       const ancestors: string[] = [];
       for (let node = inventory.nodes.get(key); node?.parent; node = inventory.nodes.get(node.parent)) ancestors.push(node.parent);
-      if (ancestors.some((ancestor) => !expanded.has(ancestor))) expanded = new Set([...expanded, ...ancestors]);
+      if (ancestors.some((ancestor) => !tree.expanded.has(ancestor))) tree.expanded = new Set([...tree.expanded, ...ancestors]);
       void tick().then(() => {
         const index = rows.findIndex((row) => row.node.key === key);
         if (index < 0) return;
@@ -193,16 +200,13 @@
         role="treeitem"
         aria-level={row.depth + 1}
         aria-selected={isSelected}
-        aria-expanded={row.kids ? expanded.has(key) : undefined}
-        aria-label={hidden.has(key) ? `${name(row.node)}, hidden` : name(row.node)}
+        aria-expanded={row.kids ? tree.expanded.has(key) : undefined}
+        aria-label={tree.hidden.has(key) ? `${name(row.node)}, hidden` : name(row.node)}
         data-index={index}
         data-key={key}
         tabindex={index === focused ? 0 : -1}
         onfocus={() => (focused = index)}
-        onclick={(event) => {
-          focused = index;
-          choose(key, event.shiftKey || event.metaKey);
-        }}
+        onclick={(event) => click(index, event)}
         onmouseenter={() => (selection.hovered = key)}
         onmouseleave={() => (selection.hovered = null)}
         class="absolute right-0 left-0 flex cursor-default items-center gap-1 pr-2 outline-offset-[-2px]"
@@ -222,8 +226,8 @@
             class="grid size-6 shrink-0 place-items-center text-xs opacity-70"
             onclick={(event) => {
               event.stopPropagation();
-              setExpanded(key, !expanded.has(key));
-            }}>{expanded.has(key) ? '▾' : '▸'}</button
+              setExpanded(key, !tree.expanded.has(key));
+            }}>{tree.expanded.has(key) ? '▾' : '▸'}</button
           >
         {:else}
           <span class="w-6 shrink-0"></span>
@@ -252,11 +256,11 @@
           type="button"
           tabindex="-1"
           class="grid size-6 shrink-0 place-items-center rounded"
-          class:opacity-60={!hidden.has(key)}
-          class:hover:opacity-100={!hidden.has(key)}
-          aria-label={hidden.has(key) ? `Show ${name(row.node)}` : `Hide ${name(row.node)}`}
-          aria-pressed={hidden.has(key)}
-          title={hidden.has(key) ? 'Show in preview (H)' : 'Hide in preview (H)'}
+          class:opacity-60={!tree.hidden.has(key)}
+          class:hover:opacity-100={!tree.hidden.has(key)}
+          aria-label={tree.hidden.has(key) ? `Show ${name(row.node)}` : `Hide ${name(row.node)}`}
+          aria-pressed={tree.hidden.has(key)}
+          title={tree.hidden.has(key) ? 'Show in preview (H)' : 'Hide in preview (H)'}
           onclick={(event) => {
             event.stopPropagation();
             toggleHidden(key);
@@ -264,7 +268,7 @@
         >
           <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-            {#if hidden.has(key)}<path d="M3 3l18 18" />{:else}<circle cx="12" cy="12" r="3" />{/if}
+            {#if tree.hidden.has(key)}<path d="M3 3l18 18" />{:else}<circle cx="12" cy="12" r="3" />{/if}
           </svg>
         </button>
       </div>

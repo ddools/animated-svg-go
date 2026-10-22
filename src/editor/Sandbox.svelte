@@ -1,23 +1,26 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { buildInventory } from '../core/parse/inventory';
-  import type { Normalised } from '../core/parse';
   import { playback } from './playback.svelte';
   import { project } from './project.svelte';
   import { mount } from './sandbox';
   import { editor } from './state.svelte';
 
-  let { result }: { result: Normalised } = $props();
+  import { selection } from './selection.svelte';
+
   let iframe: HTMLIFrameElement;
   let loaded = $state(false);
 
   // Firefox replaces a new iframe's first document when it finishes loading,
   // so wait for the load event before putting anything in it.
   $effect(() => {
-    if (!loaded) return;
-    const sandbox = mount(iframe, result.svg);
+    const drawing = project.drawing;
+    if (!loaded || !drawing) return;
+    const sandbox = mount(iframe, drawing.svg);
     editor.sandbox = sandbox;
-    editor.inventory = buildInventory(sandbox.root, result.labels);
+    editor.inventory = buildInventory(sandbox.root, drawing.labels);
+    // A structure edit or its undo can take selected layers away.
+    untrack(() => selection.set([...selection.keys].filter((key) => editor.inventory!.nodes.has(key))));
     // Untracked: attaching compiles the spec, and spec changes must not remount the drawing.
     const detach = untrack(() => playback.attach(sandbox));
     return () => {

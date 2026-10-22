@@ -53,7 +53,7 @@ export async function bench({ seconds = 5, fps = 30 } = {}): Promise<BenchRow[]>
     } as Partial<Spec>),
   );
   playback.refresh();
-  const svg = editor.result!.svg;
+  const svg = project.drawing!.svg;
   const ir = playback.ir!;
   const { canExportMp4, exportMp4, exportGif } = { ...(await import('../core/export/video')), ...(await import('../core/export/gif')) };
 

@@ -1,5 +1,16 @@
 <script lang="ts">
-  import { selectParents, selectSamePaint, selectSameType, selectSiblings, selection } from './selection.svelte';
+  import {
+    canGroup,
+    deleteSelected,
+    duplicateSelected,
+    editableSelection,
+    groupSelected,
+    selectParents,
+    selectSamePaint,
+    selectSameType,
+    selectSiblings,
+    selection,
+  } from './selection.svelte';
   import { project } from './project.svelte';
   import { editor } from './state.svelte';
   import Effects from './Effects.svelte';
@@ -15,17 +26,18 @@
 
   const inventory = $derived(editor.inventory!);
   const result = $derived(editor.result!);
+  const drawing = $derived(project.drawing!);
   const nodes = $derived([...inventory.nodes.values()]);
   const shown = $derived(nodes.filter((node) => !node.referenced));
-  const normalisedBytes = $derived(new TextEncoder().encode(result.svg).length);
+  const normalisedBytes = $derived(new TextEncoder().encode(drawing.svg).length);
 
   let gzipBytes = $state<number | null>(null);
   $effect(() => {
-    const svg = result.svg;
+    const svg = drawing.svg;
     gzipBytes = null;
     const stream = new Blob([svg]).stream().pipeThrough(new CompressionStream('gzip'));
     void new Response(stream).arrayBuffer().then((buffer) => {
-      if (svg === result.svg) gzipBytes = buffer.byteLength;
+      if (svg === drawing.svg) gzipBytes = buffer.byteLength;
     });
   });
 
@@ -45,10 +57,14 @@
   const single = $derived.by(() => {
     if (selection.keys.size !== 1) return null;
     const [key] = selection.keys;
-    const node = inventory.nodes.get(key)!;
+    const node = inventory.nodes.get(key);
+    if (!node) return null;
     const box = inventory.measure(key)?.bbox;
     return { name: project.nameOf(node), type: node.type, size: box ? `${round(box.width)} × ${round(box.height)}` : '' };
   });
+
+  const editable = $derived(selection.keys.size > 0 && editableSelection().length > 0);
+  const groupable = $derived(selection.keys.size > 0 && canGroup());
 
   function round(value: number) {
     return Math.round(value * 10) / 10;
@@ -72,6 +88,11 @@
       <button type="button" class="btn btn-xs" disabled={!selection.keys.size} onclick={selectSiblings}>Siblings</button>
       <button type="button" class="btn btn-xs" disabled={!selection.keys.size} onclick={selectParents}>Parent group</button>
       <button type="button" class="btn btn-xs btn-ghost" disabled={!selection.keys.size} onclick={() => selection.clear()}>Clear</button>
+    </div>
+    <div class="flex flex-wrap gap-1" role="group" aria-label="Edit layers">
+      <button type="button" class="btn btn-xs" disabled={!groupable} onclick={groupSelected} title="Group (⌘G)">Group</button>
+      <button type="button" class="btn btn-xs" disabled={!editable} onclick={duplicateSelected} title="Duplicate (⌘D)">Duplicate</button>
+      <button type="button" class="btn btn-xs" disabled={!editable} onclick={deleteSelected} title="Delete (⌫)">Delete</button>
     </div>
   </section>
 

@@ -15,6 +15,7 @@
 <script lang="ts">
   import { MAX_SECONDS, rasterSize, type FrameOptions } from '../core/export/frames';
   import { playback } from './playback.svelte';
+  import { project } from './project.svelte';
   import { editor } from './state.svelte';
 
   // GIF stops at 720: bigger GIFs get huge and slow for little gain.
@@ -64,8 +65,8 @@
 
   /** Everything a raster export needs, read now so an edit during the export changes nothing. */
   function frameOptions(signal?: AbortSignal): FrameOptions | null {
-    if (!editor.result || !playback.ir || !size) return null;
-    return { svg: editor.result.svg, ir: playback.ir, size, fps, background, signal };
+    if (!project.drawing || !playback.ir || !size) return null;
+    return { svg: project.drawing.svg, ir: playback.ir, size, fps, background, signal };
   }
 
   // A GIF size estimate, after the settings or the animation stop changing for a moment.
@@ -99,7 +100,7 @@
   // Made on demand, not on every edit: on a large file the export check takes a while.
   function make(): string | null {
     try {
-      return TEXT[format as TextFormat].make(editor.result!.svg, playback.ir!);
+      return TEXT[format as TextFormat].make(project.drawing!.svg, playback.ir!);
     } catch {
       status = refused;
       return null;

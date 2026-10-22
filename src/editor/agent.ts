@@ -110,11 +110,11 @@ const TOOLS: Tool[] = [
     },
     annotations: { readOnlyHint: true },
     async execute({ format }) {
-      const { result, inventory } = loaded();
+      const { inventory } = loaded();
       if (typeof format !== 'string' || !Object.hasOwn(TEXT, format)) throw new Error('format must be svg, css or js.');
       const ir = compile(project.spec, inventory);
       if (!ir.tracks.length) throw new Error('Nothing is animated yet. Add an effect with set_spec first.');
-      return TEXT[format as TextFormat].make(result.svg, ir);
+      return TEXT[format as TextFormat].make(project.drawing!.svg, ir);
     },
   },
 ];
