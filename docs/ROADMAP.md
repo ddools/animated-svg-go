@@ -139,4 +139,5 @@ Measured: built 21 Oct on `feat/vscode-extension`. The smoke test passes against
 | VS Code Language Model tools | Opus 5.5 | The WebMCP tools in `agent.ts`, offered to VS Code's agents instead |
 | Illustration search | Opus 5.5 | Openclipart or Wikimedia Commons beside Iconify. Bigger files and mixed licences, so show each licence and keep the size cap |
 | Search from the editor | Sonnet 5.5 | Icon search is on the start screen only. Reloading gets back there |
+| Ungroup, and grouping across parents | Opus 5.5 | Group, duplicate and delete shipped 22 Oct for wrapped siblings. Both need an authored transform moved onto children, which writes authored attributes (invariant 3). Ungrouping a group the editor made is the easy half |
 | Lottie | Not planned | Revisit only with real demand, and only for a transform/opacity/trim-path subset |

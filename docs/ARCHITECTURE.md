@@ -18,7 +18,7 @@ Upload -> Sanitise -> Optimise -> Rewrite        (Web Worker)
 
 Two threads. SVGO is string in, string out, so it runs in `workers/pipeline.worker.ts`. DOMPurify needs a real DOM, so sanitise and rewrite run on the main thread, on the inert document DOMPurify returns. That document is never adopted into the app DOM.
 
-Order matters: nothing but our own rewrite touches the markup after it is sanitised. Entry point: `normalise()` in `src/core/parse/index.ts`.
+Order matters: nothing but our own rewrite, and then our own edit pass (step 7), touches the markup after it is sanitised. Entry point: `normalise()` in `src/core/parse/index.ts`.
 
 1. **Size cap.** Reject over 5 MB, measured on the string.
 2. **Optimise.** Worker, `core/parse/optimise.ts`. SVGO 4 via `svgo/browser`, custom config, not `preset-default`. It does three jobs:
@@ -43,8 +43,9 @@ Order matters: nothing but our own rewrite touches the markup after it is saniti
 
 Measured at the caps on an M-series Mac (5 MB, 19,901 elements): Chromium 1.2 s optimise, 1.1 s sanitise, 0.5 s rewrite. WebKit 0.9 s, 0.8 s, 0.4 s. Sanitise and rewrite block the main thread. The caps stay as they are; M2's "loads in under 2 s" target needs this revisited.
 
-7. **Render** into the sandbox iframe (section 2, layer 2). Wait for the iframe's `load` event first: Firefox replaces a new iframe's first document when it finishes loading.
-8. **Inventory.** `core/parse/inventory.ts`, built from the live tree in the sandbox.
+7. **Edit.** Editor, `core/parse/edit.ts`. Replays the spec's `structure` ops (delete, duplicate, group) over the serialised output, in order, on a `DOMParser` XML document. It runs again only when the ops change, never for an effect edit. With no ops it hands back the pipeline's own string. The preview and every export read its result (`project.drawing`), never `editor.result`. It only removes, clones and wraps elements that are already sanitised and rewritten, and the only values it writes are generated: `data-k` and `data-for` (`k` plus hex, from the op's seed), `data-anim`, and a `c` plus hex prefix on IDs inside a copy. In a copy, only references to the copy's own IDs move to the new names, so shared defs stay shared. Grouping takes wrapped siblings only, and moves no transform, so nothing authored is written (invariant 3). An op that does not apply (a key that is gone, a group across parents, a key clash) is skipped, not thrown. After each duplicate or group the tree caps are checked at twice their pipeline values, since every animatable element has gained a wrapper, and an op past them is undone.
+8. **Render** into the sandbox iframe (section 2, layer 2). Wait for the iframe's `load` event first: Firefox replaces a new iframe's first document when it finishes loading.
+9. **Inventory.** `core/parse/inventory.ts`, built from the live tree in the sandbox.
    - Up front, per `data-k` element: type, label, parent, children, `referenced` (inside `defs`, `symbol`, `clipPath`, `mask`, `pattern`, `marker`), `hasFilter`. This is cheap.
    - Up front also `wrapped`: whether the element has a `data-anim` wrapper.
    - On first use, cached: `getBBox()` of the wrapper (so it includes the element's authored transform) padded by half the stroke width, dash length for shapes (`pathLength` if set, else `getTotalLength()`), computed fill, stroke and stroke width, `dashed` (has its own `stroke-dasharray`), `degenerate`. Measuring 20,000 elements up front would cost more than the pipeline.
@@ -125,6 +126,7 @@ type Spec = {
   duration: number;            // seconds, the timeline, 0.1 to 60
   loop: boolean;               // the whole timeline repeats
   names?: Record<string, string>; // layer names the user typed, by data-k. Editor only, never compiled or exported
+  structure?: { op: 'delete' | 'duplicate' | 'group'; keys: string[]; seed: number }[]; // up to 500, replayed by the edit pass (section 1, step 7)
   effects: Effect[];
 };
 
@@ -204,6 +206,7 @@ Rules:
 
 - `editor/project.svelte.ts` holds the spec. Undo keeps whole spec snapshots (a spec is a few KB), capped at 100. A slider drag changes the spec on every `input` and becomes one undo step on `change`.
 - Autosave keeps one IndexedDB slot: file name, the original file text, and the spec. Restore is offered with a button, never automatic, and runs the text back through the whole pipeline and the spec through the schema. Storage is not trusted, and the pipeline is deterministic, so `data-k` keys still match.
+- Delete, duplicate and group are structure ops in the spec, so they undo, autosave and restore like any edit. New keys are `k` plus `fnv1a(seed/oldKey)`, so the editor knows them before the drawing remounts and selects the copies or the new group. Delete also takes the removed keys out of effect targets and names, and drops effects left with no targets. Copies keep their names but not their effects. There is no ungroup: an authored group's transform would have to move onto its children. Undo covers a group just made.
 - Play state and the playhead are view state, outside the spec and outside undo. So is hiding a layer: `visibility: hidden` on its wrapper in the sandbox, so it still measures. Hidden layers still export.
 - `editor/agent.ts` registers WebMCP tools (`document.modelContext`, Chrome only so far, feature-detected) for AI agents in the browser: `load_svg`, `get_document`, `set_spec`, `export_animation`. They go through the same doors as a person: `load_svg` is `loadText`, so the whole pipeline runs, and `set_spec` parses with `SpecSchema` and lands as one undo step. Exports come back as text. No GIF or MP4.
 
@@ -388,6 +391,7 @@ Forbidden: gsap (licence), lottie-web as an engine, theatre.js (inactive).
 - 2026-10-21: Published to the VS Code Marketplace as `ddools.animated-svg-go` 0.1.0, by uploading the hand-zipped `.vsix` on the Marketplace's own page. It passed validation, so vsce is still not needed. Open VSX is next.
 - 2026-10-21: The smoke mode ships in the package, behind the `ASG_SMOKE` variable, so `smoke.mjs --vsix` tests the exact file people install. The webview loads its checks only when the extension asks.
 - 2026-10-22: Icon search from the free Iconify API on the start screen, website only (Der's call). Search words leave the browser for the first time, so it is opt-in and the privacy page says so. Users' own files still never leave. Icons only for now: illustrations are on the roadmap.
+- 2026-10-22: Delete, duplicate and group, as structure ops in the spec replayed by a new edit pass over the normalised drawing (`core/parse/edit.ts`). The spec stays the only state, so undo and autosave come free. Chosen over editing the sandbox DOM, which would have made the drawing state. Invariant 2 now names the edit pass alongside the rewrite. Side panels collapse, remembered in `localStorage`.
 
 ## 9. VS Code extension
 
