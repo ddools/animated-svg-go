@@ -20,7 +20,9 @@ export default defineConfig({
         "default-src 'none'",
         "img-src 'self' data: blob:",
         "font-src 'self' data:",
-        "connect-src 'self'",
+        // Iconify for icon search, which is opt-in (src/editor/IconSearch.svelte). The sandbox
+        // iframe keeps its own deny-all policy, so the drawing gains no network access.
+        "connect-src 'self' https://api.iconify.design",
         "worker-src 'self' blob:",
         "base-uri 'none'",
         "form-action 'none'",

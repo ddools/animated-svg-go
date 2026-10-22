@@ -19,7 +19,7 @@ Owner: Der (Dermot Dooley). Mac for development and testing.
 
 ## Locked decisions
 
-- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Plus a VS Code extension (M8), tested in VS Code on Mac. Local-first: every byte of a user's file stays in the browser in v1. No server storage, no uploads. Page views are counted with Vercel Web Analytics, and the privacy page says what it records.
+- **Audience:** public, free, no accounts. Desktop browsers only in v1: Chrome, Firefox and Safari on Mac. Mobile is not a target and is not tested. Plus a VS Code extension (M8), tested in VS Code on Mac. Local-first: every byte of a user's file stays in the browser in v1. No server storage, no uploads. Page views are counted with Vercel Web Analytics, and the privacy page says what it records. Icon search is opt-in and sends search words to Iconify.
 - **v1 exports:** animated SVG with embedded CSS, inline SVG + CSS snippet, JS (WAAPI) snippet, GIF, MP4.
 - **Not in v1:** path morphing (v1.1), Lottie export (deferred, likely never), sharing links (later, via Vercel Blob).
 - **Stack:** Astro 7, one Svelte 5 editor island (`client:only="svelte"`), Tailwind 4, daisyUI 5, Vercel static hosting, GitHub Actions.
