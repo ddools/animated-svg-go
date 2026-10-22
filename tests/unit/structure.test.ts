@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newKey } from '../../src/core/parse/edit';
 import { newSpec, SpecSchema } from '../../src/core/spec/schema';
 
-// The edit pass itself needs a DOM, so it is tested in the browser (tests/e2e/layers.spec.ts).
+// The edit pass itself needs a DOM, so it is tested in the browser (tests/e2e/structure.spec.ts, tests/security).
 describe('structure ops', () => {
   const valid = (structure: unknown) => SpecSchema.safeParse({ ...newSpec(), structure }).success;
 

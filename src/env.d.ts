@@ -11,7 +11,8 @@ interface Window {
     exports: typeof import('./core/backends/css') &
       typeof import('./core/backends/snippet') &
       typeof import('./core/backends/sampler') &
-      typeof import('./core/export/frames');
+      typeof import('./core/export/frames') &
+      typeof import('./core/parse/edit');
     encoders: () => Promise<typeof import('./core/export/video') & typeof import('./core/export/gif')>;
     bench: typeof import('./editor/bench').bench;
   };

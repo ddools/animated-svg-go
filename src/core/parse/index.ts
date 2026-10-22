@@ -12,31 +12,27 @@ export type Normalised = {
   timings: { optimise: number; sanitise: number; rewrite: number };
 };
 
-/** Scale 2 checks a rewritten tree: every animatable element has gained a wrapper. */
-export function enforceTreeLimits(root: Element, scale = 1): void {
+function enforceTreeLimits(root: Element): void {
   const count = root.querySelectorAll('*').length + 1;
-  const elements = LIMITS.elements * scale;
-  const expanded = LIMITS.expanded * scale;
-  const deepest = LIMITS.depth * scale;
-  if (count > elements) {
-    throw new PipelineError('too-many-elements', `${count} elements. The limit is ${elements}.`);
+  if (count > LIMITS.elements) {
+    throw new PipelineError('too-many-elements', `${count} elements. The limit is ${LIMITS.elements}.`);
   }
-  if (expandedSize(root, expanded) > expanded) {
-    throw new PipelineError('too-many-elements', `More than ${expanded} shapes once every <use> is expanded.`);
+  if (expandedSize(root, LIMITS.expanded) > LIMITS.expanded) {
+    throw new PipelineError('too-many-elements', `More than ${LIMITS.expanded} shapes once every <use> is expanded.`);
   }
   // Leaves are the deepest nodes, so only they need measuring.
   for (const leaf of root.querySelectorAll('*:not(:has(*))')) {
     let depth = 0;
     for (let node: Element | null = leaf; node && node !== root; node = node.parentElement) depth++;
-    if (depth > deepest) throw new PipelineError('too-deep', `Nested deeper than ${deepest} levels.`);
+    if (depth > LIMITS.depth) throw new PipelineError('too-deep', `Nested deeper than ${LIMITS.depth} levels.`);
   }
 }
 
 /**
- * Element count once every <use> is expanded, capped just past the limit.
+ * Element count once every <use> is expanded, capped just past `cap`.
  * Iterative, because a chain of <use> can be as long as the element limit.
  */
-function expandedSize(root: Element, cap: number): number {
+export function expandedSize(root: Element, cap: number): number {
   const byId = new Map<string, Element>();
   for (const element of root.querySelectorAll('[id]')) {
     if (!byId.has(element.id)) byId.set(element.id, element);

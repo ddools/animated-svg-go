@@ -12,6 +12,7 @@
   import * as sampler from '../core/backends/sampler';
   import * as snippet from '../core/backends/snippet';
   import * as frames from '../core/export/frames';
+  import * as edit from '../core/parse/edit';
   import { registerAgentTools } from './agent';
   import { host } from './host';
   import { loadFile, loadText } from './load';
@@ -32,7 +33,7 @@
       playback,
       // Puts markup in the sandbox without sanitising it, to test the sandbox on its own.
       mountRaw: (svg) => mount(document.querySelector('iframe')!, svg),
-      exports: { ...cssBackend, ...snippet, ...sampler, ...frames },
+      exports: { ...cssBackend, ...snippet, ...sampler, ...frames, ...edit },
       // Loaded on demand, as the export panel loads them.
       encoders: async () => ({ ...(await import('../core/export/video')), ...(await import('../core/export/gif')) }),
       // Raster export timings for Der to run in real browsers. Loaded on demand.

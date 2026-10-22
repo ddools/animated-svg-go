@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type BrowserContext } from '@playwright/test';
 import type { IR } from '../../src/core/ir/types';
+import { newKey } from '../../src/core/parse/edit';
 import { normalise, openPipeline } from '../helpers/pipeline';
 import { payloads } from './payloads';
 
@@ -173,16 +174,25 @@ test.describe('hostile files stay inert once exported', () => {
       const out = await normalise(page, raw);
       test.skip(!out.ok, 'refused');
       // With nothing to animate the export still runs: the XML serialise and HTML re-parse are what an mXSS payload targets.
+      // The first layer drawn in place is duplicated and grouped first, so the edit pass's output is what gets exported.
       const key = out.ok ? out.svg.match(/data-k="(k[0-9a-f]{8})"/)?.[1] : undefined;
+      const layer = out.ok ? out.svg.match(/data-for="(k[0-9a-f]{8})"/)?.[1] : undefined;
       const exported = await page.evaluate(
-        ([svg, ir]) => {
-          const { animatedSvg, jsSnippet, checkedExport, withStyle, frameCss, scopeOf } = window.__asg!.exports;
+        ([svg, ir, layer]) => {
+          const { animatedSvg, jsSnippet, checkedExport, withStyle, frameCss, scopeOf, applyStructure } = window.__asg!.exports;
+          if (layer) {
+            const ops = [{ op: 'duplicate' as const, keys: [layer], seed: 1 }, { op: 'group' as const, keys: [layer], seed: 2 }];
+            svg = applyStructure(svg, {}, ops).svg;
+          }
           const scope = scopeOf(svg, ir);
           // A raster frame takes the cheap path: checked once, then only its style is checked.
-          return { svg: animatedSvg(svg, ir), js: jsSnippet(svg, ir), frame: withStyle(checkedExport(svg, scope), frameCss(ir, 0.5, scope)) };
+          return { edited: svg, svg: animatedSvg(svg, ir), js: jsSnippet(svg, ir), frame: withStyle(checkedExport(svg, scope), frameCss(ir, 0.5, scope)) };
         },
-        [out.ok ? out.svg : '', animation(key)] as const,
+        [out.ok ? out.svg : '', animation(key), layer] as const,
       );
+      // The sandbox mounts the edit pass's output as it is, with no sanitiser after it, so it is checked on its own too.
+      expect(await page.evaluate(inspect, { markup: exported.edited })).toEqual([]);
+      if (layer) expect(exported.edited).toContain(`data-k="${newKey(1, layer)}"`);
       // The new output forms really are in what gets detonated.
       if (key) {
         expect(exported.svg).toContain('animation-composition:add,add');
@@ -199,6 +209,48 @@ test.describe('hostile files stay inert once exported', () => {
       expect(await detonate(context, exported.js, 'inline in HTML')).toEqual({ dialogs: [], requests: [] });
     });
   }
+});
+
+test('copies keep their references inside the document, and copies of copies too', async ({ page }) => {
+  await openPipeline(page);
+  const raw = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
+    <defs><linearGradient id="shared"><stop offset="1" stop-color="red"/></linearGradient></defs>
+    <g id="badge" aria-owns="label" aria-labelledby="label shared">
+      <clipPath id="clip"><rect width="10" height="10"/></clipPath>
+      <rect id="label" width="20" height="20" fill="url(#shared)" clip-path="url(#clip)"/>
+      <use href="#label" x="30"/><use xlink:href="#label" x="60"/>
+    </g>
+  </svg>`;
+  const out = await normalise(page, raw);
+  expect(out.ok).toBe(true);
+  const badge = out.ok ? Object.entries(out.labels).find(([, label]) => label === 'badge')![0] : '';
+  const edited = await page.evaluate(
+    ([svg, badge]) => {
+      const { applyStructure, newKey } = window.__asg!.exports;
+      const copy = newKey(1, badge);
+      const ops = [
+        { op: 'duplicate' as const, keys: [badge], seed: 1 },
+        { op: 'duplicate' as const, keys: [copy], seed: 2 },
+        { op: 'group' as const, keys: [badge, copy], seed: 3 },
+        { op: 'group' as const, keys: [newKey(3, 'group')], seed: 4 },
+      ];
+      return applyStructure(svg, {}, ops).svg;
+    },
+    [out.ok ? out.svg : '', badge] as const,
+  );
+  expect(await page.evaluate(inspect, { markup: edited })).toEqual([]);
+  const ids = [...edited.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const id of ids) expect(id).toMatch(/^a[0-9a-f]{8}-[\w-]+?(-c[0-9a-f]{8})*$/);
+  for (const key of edited.matchAll(/data-(?:k|for)="([^"]*)"/g)) expect(key[1]).toMatch(/^k[0-9a-f]{8}$/);
+  const refs = [
+    ...[...edited.matchAll(/url\(#([^)]+)\)|href="#([^"]+)"/g)].map((match) => match[1] ?? match[2]),
+    ...[...edited.matchAll(/aria-(?:owns|labelledby)="([^"]+)"/g)].flatMap((match) => match[1].split(' ')),
+  ];
+  // Three badges, each with seven references: three ARIA IDs, the fill, the clip and two uses. The shared gradient stays shared.
+  expect(refs.length).toBe(3 * 7);
+  for (const ref of refs) expect(ids).toContain(ref);
+  expect(ids.filter((id) => id.endsWith('-shared'))).toHaveLength(1);
 });
 
 test('the export check refuses a style that is not ours, and strips any other', async ({ page }) => {

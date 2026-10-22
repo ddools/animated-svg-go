@@ -91,7 +91,7 @@ export async function checks(phase: string, vscode: VsCode): Promise<void> {
     const key = editor.inventory?.roots[0];
     if (key) project.edit((spec) => void spec.effects.push(newEffect('spin', [key], 'smoke')));
     await until(() => (playback.ir?.tracks.length ?? 0) > 0, 'the IR');
-    const options = () => ({ svg: editor.result!.svg, ir: playback.ir!, size: { width: 320, height: 320 }, fps: 30, background: '#ffffff' });
+    const options = () => ({ svg: project.drawing!.svg, ir: playback.ir!, size: { width: 320, height: 320 }, fps: 30, background: '#ffffff' });
     await check('mp4', async () => {
       const { canExportMp4, exportMp4 } = await import('../src/core/export/video');
       if (!(await canExportMp4({ width: 320, height: 320 }))) throw new Error('canExportMp4 says no');
