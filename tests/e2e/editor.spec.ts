@@ -29,6 +29,24 @@ test('a picked file renders inside a script-less sandbox', async ({ page }) => {
   expect(await page.locator('[data-k]').count()).toBe(0);
 });
 
+test('side panels collapse to give the canvas room, and stay collapsed', async ({ page }) => {
+  await open(page);
+  const canvas = page.getByTestId('canvas');
+  const wide = (await canvas.boundingBox())!.width;
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await page.getByRole('button', { name: 'Controls' }).click();
+  await expect(page.getByRole('navigation', { name: 'Layers' })).toBeHidden();
+  await expect(page.getByRole('complementary')).toBeHidden();
+  expect((await canvas.boundingBox())!.width).toBeGreaterThan(wide + 400);
+
+  await page.reload();
+  await page.locator('input[type=file]').setInputFiles(file('simple.svg', SIMPLE));
+  await page.waitForFunction(() => window.__asg?.editor.inventory !== undefined);
+  await expect(page.getByRole('button', { name: 'Layers', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await expect(page.getByRole('tree', { name: 'Layers' })).toBeVisible();
+});
+
 test('a dropped file and pasted SVG text both load', async ({ page }) => {
   await page.goto('/editor');
   // The island hydrates after load. Wait for it before sending events it listens for.

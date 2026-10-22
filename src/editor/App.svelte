@@ -50,6 +50,35 @@
 
   let view = $state<'image' | 'markup'>('image');
 
+  // Side panels, remembered in this browser. Storage can be blocked, so this is only a convenience.
+  // Collapsed means display: none, not unmounted: the tree keeps hiding layers and an export keeps running.
+  const PANELS_KEY = 'asg-panels';
+  type Panels = { layers: boolean; controls: boolean };
+  function savedPanels(): Panels {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PANELS_KEY) ?? 'null');
+      if (typeof saved?.layers === 'boolean' && typeof saved?.controls === 'boolean') return saved;
+    } catch {
+      // Falls through to the defaults.
+    }
+    // A narrow window starts with the canvas and controls only.
+    return { layers: innerWidth >= 1024, controls: true };
+  }
+  let panels = $state(savedPanels());
+  let width = $state(innerWidth);
+  const columns = $derived(
+    [panels.layers && (width >= 1280 ? '16rem' : '13rem'), 'minmax(0, 1fr)', panels.controls && (width >= 1280 ? '18rem' : '16rem')].filter(Boolean).join(' '),
+  );
+
+  function toggle(panel: keyof Panels) {
+    panels[panel] = !panels[panel];
+    try {
+      localStorage.setItem(PANELS_KEY, JSON.stringify(panels));
+    } catch {
+      // Not remembered, that's all.
+    }
+  }
+
   const FRAME = 1 / 30;
 
   /** Space, arrows, Home and End drive the playhead. Not while typing, choosing, or on a button or slider that uses the key. */
@@ -131,7 +160,7 @@
   }
 </script>
 
-<svelte:window ondragover={(event) => event.preventDefault()} ondrop={drop} onpaste={paste} onkeydown={keydown} />
+<svelte:window bind:innerWidth={width} ondragover={(event) => event.preventDefault()} ondrop={drop} onpaste={paste} onkeydown={keydown} />
 
 <div class="flex h-screen flex-col">
   <header class="border-base-300 flex items-center gap-4 border-b px-4 py-2">
@@ -146,6 +175,8 @@
     {#if editor.status === 'ready'}
       <span class="truncate text-sm opacity-70">{editor.fileName}</span>
       <span class="ml-auto flex gap-1">
+        <button type="button" class="btn btn-sm btn-ghost" aria-pressed={panels.layers} onclick={() => toggle('layers')} title="Show or hide the layer list">Layers</button>
+        <button type="button" class="btn btn-sm btn-ghost" aria-pressed={panels.controls} onclick={() => toggle('controls')} title="Show or hide the controls">Controls</button>
         <button type="button" class="btn btn-sm btn-ghost" disabled={!project.past.length} onclick={() => project.undo()} title="Undo (⌘Z)">Undo</button>
         <button type="button" class="btn btn-sm btn-ghost" disabled={!project.future.length} onclick={() => project.redo()} title="Redo (⇧⌘Z)">Redo</button>
       </span>
@@ -161,8 +192,8 @@
 
   <main class="min-h-0 flex-1">
     {#if editor.status === 'ready' && editor.result}
-      <div class="grid h-full grid-cols-[16rem_1fr_18rem]">
-        <nav class="border-base-300 min-h-0 border-r" aria-label="Layers">
+      <div class="grid h-full" style:grid-template-columns={columns}>
+        <nav class="border-base-300 min-h-0 border-r" class:hidden={!panels.layers} aria-label="Layers">
           {#if editor.inventory}
             {#key editor.inventory}<LayerTree />{/key}
           {/if}
@@ -185,7 +216,7 @@
           <Timeline />
           <Bars />
         </div>
-        <aside class="border-base-300 min-h-0 overflow-y-auto border-l">
+        <aside class="border-base-300 min-h-0 overflow-y-auto border-l" class:hidden={!panels.controls}>
           {#if editor.inventory}<Panel />{/if}
         </aside>
       </div>
