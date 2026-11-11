@@ -230,3 +230,17 @@ test('dragging a bar moves its start, and a click does not', async ({ page }) =>
   expect((await effect(page)).timing.duration).toBe(0.5);
   expect(await page.evaluate(() => window.__asg!.project.past.length)).toBe(past + 1);
 });
+
+test('delete animation removes every effect in one undo step', async ({ page }) => {
+  await open(page);
+  const remove = page.getByRole('button', { name: 'Delete animation' });
+  await expect(remove).toBeDisabled();
+  await addEffect(page);
+  await addEffect(page, 'Fade');
+  await remove.click();
+  expect(await page.evaluate(() => window.__asg!.project.spec.effects.length)).toBe(0);
+  expect(await page.evaluate(() => [window.__asg!.playback.playing, window.__asg!.playback.time])).toEqual([false, 0]);
+  await expect(remove).toBeDisabled();
+  await page.evaluate(() => window.__asg!.project.undo());
+  expect(await page.evaluate(() => window.__asg!.project.spec.effects.length)).toBe(2);
+});
