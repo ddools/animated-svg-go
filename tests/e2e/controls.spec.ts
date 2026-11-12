@@ -192,7 +192,7 @@ test('dragging or nudging a bar end sets the run length, one undo step per drag'
   await open(page);
   await addEffect(page, 'Fade');
   const handle = page.getByRole('slider', { name: 'Fade duration' });
-  const track = (await page.getByRole('list', { name: 'Effect bars' }).locator('li').boundingBox())!;
+  const track = (await page.getByRole('list', { name: 'Effect bars' }).getByTestId('track').first().boundingBox())!;
   const box = (await handle.boundingBox())!;
   const spec = await page.evaluate(() => window.__asg!.project.spec);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -214,7 +214,7 @@ test('dragging a bar moves its start, and a click does not', async ({ page }) =>
   await addEffect(page, 'Fade');
   await page.evaluate(() => window.__asg!.project.edit((spec) => void (spec.effects[0].timing.duration = 0.5)));
   const bar = page.getByRole('list', { name: 'Effect bars' }).getByRole('button', { name: /^Fade/ });
-  const track = (await page.getByRole('list', { name: 'Effect bars' }).locator('li').boundingBox())!;
+  const track = (await page.getByRole('list', { name: 'Effect bars' }).getByTestId('track').first().boundingBox())!;
   const past = await page.evaluate(() => window.__asg!.project.past.length);
   await bar.click();
   expect((await effect(page)).timing.start).toBe(0);
@@ -229,4 +229,16 @@ test('dragging a bar moves its start, and a click does not', async ({ page }) =>
   expect((await effect(page)).timing.start).toBeCloseTo(duration / 4, 1);
   expect((await effect(page)).timing.duration).toBe(0.5);
   expect(await page.evaluate(() => window.__asg!.project.past.length)).toBe(past + 1);
+});
+
+test('the × on a bar deletes that effect in one undo step', async ({ page }) => {
+  await open(page);
+  await addEffect(page);
+  await addEffect(page, 'Fade');
+  const bars = page.getByRole('list', { name: 'Effect bars' });
+  await bars.getByRole('button', { name: 'Delete Spin' }).click();
+  expect(await page.evaluate(() => window.__asg!.project.spec.effects.map((e) => e.type))).toEqual(['fade']);
+  await expect(bars.getByRole('button', { name: 'Delete Spin' })).toHaveCount(0);
+  await page.evaluate(() => window.__asg!.project.undo());
+  expect(await page.evaluate(() => window.__asg!.project.spec.effects.map((e) => e.type))).toEqual(['spin', 'fade']);
 });
