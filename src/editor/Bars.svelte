@@ -49,6 +49,12 @@
     retime(effect.id, 'duration', (end - start - tail) / (iterations === 'infinite' ? 1 : iterations), 'drag');
   }
 
+  /** Deletes the effect. One undo step, like the × in the panel. */
+  function remove(effect: Effect) {
+    project.edit((spec) => void (spec.effects = spec.effects.filter((e) => e.id !== effect.id)));
+    if (project.active === effect.id) project.active = null;
+  }
+
   function nudge(event: KeyboardEvent, effect: Effect) {
     const step = { ArrowRight: 0.05, ArrowUp: 0.05, ArrowLeft: -0.05, ArrowDown: -0.05 }[event.key];
     if (!step) return;
@@ -64,48 +70,59 @@
   {/if}
   {#each project.spec.effects as effect (effect.id)}
     {@const range = span(effect)}
-    <li class="bg-base-200 relative h-5 shrink-0 rounded">
-      {#if range}
-        <button
-          type="button"
-          class="btn btn-primary btn-xs absolute inset-y-0 min-h-0 cursor-grab touch-none justify-start overflow-hidden px-1 active:cursor-grabbing"
-          class:btn-outline={effect.id !== project.active}
-          style:left={`${(range.from / duration) * 100}%`}
-          style:width={`${((range.to - range.from) / duration) * 100}%`}
-          aria-pressed={effect.id === project.active}
-          aria-label={`${EFFECTS[effect.type].label}, ${range.from.toFixed(2)} to ${range.to.toFixed(2)} seconds`}
-          onclick={() => chooseEffect(effect)}
-          onpointerdown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            grab = { x: event.clientX, start: effect.timing.start, moved: false };
-          }}
-          onpointermove={(event) => move(event, effect)}
-          onlostpointercapture={() => {
-            grab = null;
-            project.settle();
-          }}
-        >
-          {EFFECTS[effect.type].label}
-        </button>
-        <div
-          role="slider"
-          tabindex="0"
-          class="bg-base-content/40 hover:bg-base-content/70 focus-visible:outline-primary absolute inset-y-0 w-1.5 -translate-x-full cursor-ew-resize touch-none rounded-r"
-          style:left={`${(range.to / duration) * 100}%`}
-          aria-label={`${EFFECTS[effect.type].label} duration`}
-          aria-valuemin={EFFECTS[effect.type].minDuration ?? 0.05}
-          aria-valuemax={duration}
-          aria-valuenow={effect.timing.duration}
-          aria-valuetext={`${effect.timing.duration} seconds per run`}
-          onpointerdown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            chooseEffect(effect);
-          }}
-          onpointermove={(event) => resize(event, effect)}
-          onlostpointercapture={() => project.settle()}
-          onkeydown={(event) => nudge(event, effect)}
-        ></div>
-      {/if}
+    <li class="flex h-5 shrink-0 items-center gap-1">
+      <div class="bg-base-200 relative h-full flex-1 rounded" data-testid="track">
+        {#if range}
+          <button
+            type="button"
+            class="btn btn-primary btn-xs absolute inset-y-0 min-h-0 cursor-grab touch-none justify-start overflow-hidden px-1 active:cursor-grabbing"
+            class:btn-outline={effect.id !== project.active}
+            style:left={`${(range.from / duration) * 100}%`}
+            style:width={`${((range.to - range.from) / duration) * 100}%`}
+            aria-pressed={effect.id === project.active}
+            aria-label={`${EFFECTS[effect.type].label}, ${range.from.toFixed(2)} to ${range.to.toFixed(2)} seconds`}
+            onclick={() => chooseEffect(effect)}
+            onpointerdown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              grab = { x: event.clientX, start: effect.timing.start, moved: false };
+            }}
+            onpointermove={(event) => move(event, effect)}
+            onlostpointercapture={() => {
+              grab = null;
+              project.settle();
+            }}
+          >
+            {EFFECTS[effect.type].label}
+          </button>
+          <div
+            role="slider"
+            tabindex="0"
+            class="bg-base-content/40 hover:bg-base-content/70 focus-visible:outline-primary absolute inset-y-0 w-1.5 -translate-x-full cursor-ew-resize touch-none rounded-r"
+            style:left={`${(range.to / duration) * 100}%`}
+            aria-label={`${EFFECTS[effect.type].label} duration`}
+            aria-valuemin={EFFECTS[effect.type].minDuration ?? 0.05}
+            aria-valuemax={duration}
+            aria-valuenow={effect.timing.duration}
+            aria-valuetext={`${effect.timing.duration} seconds per run`}
+            onpointerdown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              chooseEffect(effect);
+            }}
+            onpointermove={(event) => resize(event, effect)}
+            onlostpointercapture={() => project.settle()}
+            onkeydown={(event) => nudge(event, effect)}
+          ></div>
+        {/if}
+      </div>
+      <button
+        type="button"
+        class="btn btn-ghost btn-xs h-5 min-h-0 w-5 p-0"
+        aria-label={`Delete ${EFFECTS[effect.type].label}`}
+        title="Delete"
+        onclick={() => remove(effect)}
+      >
+        ×
+      </button>
     </li>
   {/each}
 </ul>

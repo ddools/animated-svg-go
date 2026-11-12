@@ -9,14 +9,6 @@
     const value = Number((event.currentTarget as HTMLInputElement).value);
     if (value >= 0.1 && value <= 60) project.edit((spec) => void (spec.duration = value));
   }
-
-  /** Removes every effect in one undo step. The drawing goes back to still. */
-  function clear() {
-    playback.pause();
-    project.edit((spec) => void (spec.effects = []));
-    project.active = null;
-    playback.seek(0);
-  }
 </script>
 
 <div class="border-base-300 flex items-center gap-3 border-t px-4 py-2 text-sm" role="group" aria-label="Playback">
@@ -57,14 +49,4 @@
     />
     Loop
   </label>
-  <button
-    type="button"
-    class="btn btn-xs"
-    disabled={!project.spec.effects.length}
-    onclick={clear}
-    title="Remove every effect. Undo brings them back."
-    data-testid="delete-animation"
-  >
-    Delete animation
-  </button>
 </div>
